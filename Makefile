@@ -39,7 +39,7 @@ deploy-lambda:
 	test -f lambda.zip
 	aws lambda update-function-code \
 	--region eu-north-1 \
-	--function-name notes-db \
+	--function-name tinynotes-db \
 	--zip-file fileb://lambda.zip
 
 dist-html:

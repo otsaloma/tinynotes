@@ -821,11 +821,31 @@ function toggleCollapse(item) {
 function handlePaste(e) {
     e.preventDefault();
     let text = e.clipboardData.getData("text/plain");
+    let lines = text.split("\n").filter(l => l.trim() !== "");
     let textEl = e.target;
     let pos = getCursorPos(textEl);
     let content = textEl.textContent;
-    textEl.textContent = content.slice(0, pos) + text + content.slice(pos);
-    setCursorPos(textEl, pos + text.length);
+    if (lines.length <= 1) {
+        textEl.textContent = content.slice(0, pos) + text + content.slice(pos);
+        setCursorPos(textEl, pos + text.length);
+    } else {
+        let before = content.slice(0, pos);
+        let after = content.slice(pos);
+        textEl.textContent = before + lines[0].trim();
+        let item = textEl.closest(".item");
+        let parent = item.parentElement;
+        let ref = item.nextSibling;
+        let lastItem = item;
+        for (let i = 1; i < lines.length; i++) {
+            let newItem = createItem(lines[i].trim());
+            parent.insertBefore(newItem, ref);
+            lastItem = newItem;
+        }
+        let lastTextEl = getTextEl(lastItem);
+        let lastText = lastTextEl.textContent;
+        lastTextEl.textContent = lastText + after;
+        setCursorPos(lastTextEl, lastText.length);
+    }
     save();
 }
 

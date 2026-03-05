@@ -5,6 +5,8 @@ Tiny Notes is a simple note-taking web app that supports bullet-point
 notes, collapsible bullets and zoom-in bullets. The app itself is
 entirely client-side JavaScript. Sync is provided to AWS S3 via a custom
 Lambda function. Tiny Notes is essentially a simplified Workflowy clone.
+The main implementation is in files `index.css`, `index.html` and
+`index.js`.
 
 ## General
 

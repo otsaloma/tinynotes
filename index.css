@@ -1,7 +1,8 @@
 /* -*- coding: utf-8-unix -*- */
 
 :root {
-  --color-background: #fcfcf0;
+  --color-background: #fafafa;
+  --color-link: #3584e4;
   --color-text: #374151;
   --font-family-monospace: Berkeley Mono, ui-monospace, monospace;
   --font-family-sans-serif: Avenir Next, system-ui, sans-serif;
@@ -21,15 +22,14 @@ body {
   font-size: var(--font-size-main);
   line-height: 2;
   margin: 0 auto;
-  max-width: 64rem;
+  max-width: 48rem;
   padding: 3rem;
   text-rendering: optimizeLegibility;
 }
 
 #breadcrumb {
-  color: #9ca3af;
-  font-size: var(--font-size-small);
   margin-bottom: 1rem;
+  opacity: 0.5;
   user-select: none;
 }
 
@@ -39,10 +39,6 @@ body {
 
 .breadcrumb-item:hover {
   color: var(--color-text);
-}
-
-.breadcrumb-sep {
-  color: #d1d5db;
 }
 
 .children {
@@ -59,10 +55,12 @@ body {
 }
 
 .toggle {
-  color: #9ca3af;
+  bottom: -2px;
   cursor: pointer;
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 16px;
+  opacity: 0.5;
+  position: relative;
   user-select: none;
   width: 16px;
 }
@@ -70,7 +68,7 @@ body {
 .bullet {
   cursor: pointer;
   flex-shrink: 0;
-  margin-right: 4px;
+  margin-right: 6px;
   user-select: none;
 }
 
@@ -81,15 +79,15 @@ body {
 }
 
 .text a {
-  color: inherit;
+  color: var(--color-link);
   cursor: pointer;
+  text-decoration-color: var(--color-link);
   text-decoration: underline;
-  text-decoration-color: #9ca3af;
-  text-underline-offset: 2px;
+  text-underline-offset: 5px;
 }
 
 .item.selected > .row {
-  background-color: #dbeafe;
+  background-color: #f5f5aa;
   border-radius: 2px;
 }
 

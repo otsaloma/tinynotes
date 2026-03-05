@@ -20,7 +20,7 @@ body {
   color: var(--color-text);
   font-family: var(--font-family-monospace);
   font-size: var(--font-size-main);
-  line-height: 2;
+  line-height: 1.7;
   margin: 0 auto;
   max-width: 48rem;
   padding: 3rem;
@@ -52,6 +52,7 @@ body {
 .row {
   align-items: baseline;
   display: flex;
+  padding: 2px 0;
 }
 
 .toggle {

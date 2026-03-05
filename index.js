@@ -373,6 +373,22 @@ function applyColor(item, color) {
     save();
 }
 
+function itemToText(item, indent) {
+    let text = getTextEl(item).textContent;
+    let prefix = "  ".repeat(indent);
+    let result = prefix + "- " + text + "\n";
+    let childrenEl = getChildrenEl(item);
+    for (let child of childrenEl.querySelectorAll(":scope > .item")) {
+        result += itemToText(child, indent + 1);
+    }
+    return result;
+}
+
+function copyAsText(item) {
+    let text = itemToText(item, 0);
+    navigator.clipboard.writeText(text);
+}
+
 function openColorMenu(item) {
     closeColorMenu();
     let menuBtn = item.querySelector(":scope > .row > .menu-btn");
@@ -399,6 +415,18 @@ function openColorMenu(item) {
         closeColorMenu();
     });
     popover.appendChild(clearSwatch);
+    let divider = document.createElement("div");
+    divider.className = "menu-divider";
+    popover.appendChild(divider);
+    let copyBtn = document.createElement("div");
+    copyBtn.className = "menu-action";
+    copyBtn.textContent = "Copy as text";
+    copyBtn.addEventListener("click", e => {
+        e.stopPropagation();
+        copyAsText(item);
+        closeColorMenu();
+    });
+    popover.appendChild(copyBtn);
     let rect = menuBtn.getBoundingClientRect();
     popover.style.left = rect.left + "px";
     popover.style.top = (rect.bottom + 4) + "px";

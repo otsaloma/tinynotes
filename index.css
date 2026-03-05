@@ -170,6 +170,7 @@ body {
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 6px 8px;
   position: absolute;
@@ -191,4 +192,20 @@ body {
 .menu-swatch.swatch-clear {
   background: #fff;
   border: 2px solid #d1d5db;
+}
+
+.menu-divider {
+  border-top: 1px solid #e5e7eb;
+  width: 100%;
+}
+
+.menu-action {
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: var(--font-size-small);
+  width: 100%;
+}
+
+.menu-action:hover {
+  color: #111827;
 }

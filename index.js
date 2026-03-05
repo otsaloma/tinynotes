@@ -991,7 +991,9 @@ function setupEvents() {
                 let focused = document.activeElement;
                 if (focused && focused.classList.contains("text")) {
                     e.preventDefault();
-                    applyColor(focused.closest(".item"), colorShortcuts[key]);
+                    let item = focused.closest(".item");
+                    let current = colorShortcuts[key];
+                    applyColor(item, item.dataset.color === current ? null : current);
                 }
             }
         }

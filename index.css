@@ -112,3 +112,83 @@ body {
 .zoom-root > .row {
   display: none;
 }
+
+/* Background colors */
+
+.text[class*="bg-"] {
+  flex: 0 1 auto;
+}
+
+.text.bg-blue {
+  background-color: #dbeafe;
+}
+
+.text.bg-green {
+  background-color: #dcfce7;
+}
+
+.text.bg-orange {
+  background-color: #ffedd5;
+}
+
+.text.bg-red {
+  background-color: #fee2e2;
+}
+
+.text.bg-turquoise {
+  background-color: #ccfbf1;
+}
+
+.text.bg-violet {
+  background-color: #ede9fe;
+}
+
+.text.bg-yellow {
+  background-color: #fef9c3;
+}
+
+/* Ellipsis menu */
+
+.menu-btn {
+  color: #9ca3af;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 14px;
+  opacity: 0;
+  user-select: none;
+  width: 16px;
+}
+
+.row:hover > .menu-btn,
+.menu-btn.active {
+  opacity: 1;
+}
+
+.menu-popover {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  position: absolute;
+  z-index: 100;
+}
+
+.menu-swatch {
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  height: 20px;
+  width: 20px;
+}
+
+.menu-swatch:hover {
+  border-color: #9ca3af;
+}
+
+.menu-swatch.swatch-clear {
+  background: #fff;
+  border: 2px solid #d1d5db;
+}

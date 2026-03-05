@@ -12,12 +12,15 @@ function generateId() {
     return crypto.randomUUID();
 }
 
-function createItem(text) {
+function createItem(text, color) {
     let item = document.createElement("div");
     item.className = "item";
     item.dataset.id = generateId();
     let row = document.createElement("div");
     row.className = "row";
+    let menuBtn = document.createElement("span");
+    menuBtn.className = "menu-btn";
+    menuBtn.textContent = "\u22ef";
     let toggle = document.createElement("span");
     toggle.className = "toggle";
     toggle.textContent = "\u00a0";
@@ -28,6 +31,11 @@ function createItem(text) {
     textEl.className = "text";
     textEl.contentEditable = "true";
     textEl.textContent = text || "";
+    if (color) {
+        item.dataset.color = color;
+        textEl.classList.add("bg-" + color);
+    }
+    row.appendChild(menuBtn);
     row.appendChild(toggle);
     row.appendChild(bullet);
     row.appendChild(textEl);
@@ -322,6 +330,81 @@ function handleDeleteMulti() {
     save();
 }
 
+// Color Menu
+
+let colorChoices = [
+    { key: "yellow", value: "#fef9c3" },
+    { key: "orange", value: "#ffedd5" },
+    { key: "red", value: "#fee2e2" },
+    { key: "violet", value: "#ede9fe" },
+    { key: "blue", value: "#dbeafe" },
+    { key: "green", value: "#dcfce7" },
+    { key: "turquoise", value: "#ccfbf1" },
+];
+
+let colorShortcuts = {
+    "y": "yellow",
+    "o": "orange",
+    "r": "red",
+    "v": "violet",
+    "b": "blue",
+    "g": "green",
+    "t": "turquoise",
+};
+
+function closeColorMenu() {
+    let existing = document.querySelector(".menu-popover");
+    if (existing) existing.remove();
+    let activeBtn = document.querySelector(".menu-btn.active");
+    if (activeBtn) activeBtn.classList.remove("active");
+}
+
+function applyColor(item, color) {
+    let textEl = getTextEl(item);
+    for (let c of colorChoices) {
+        textEl.classList.remove("bg-" + c.key);
+    }
+    if (color) {
+        item.dataset.color = color;
+        textEl.classList.add("bg-" + color);
+    } else {
+        delete item.dataset.color;
+    }
+    save();
+}
+
+function openColorMenu(item) {
+    closeColorMenu();
+    let menuBtn = item.querySelector(":scope > .row > .menu-btn");
+    menuBtn.classList.add("active");
+    let popover = document.createElement("div");
+    popover.className = "menu-popover";
+    for (let c of colorChoices) {
+        let swatch = document.createElement("div");
+        swatch.className = "menu-swatch";
+        swatch.style.backgroundColor = c.value;
+        swatch.dataset.color = c.key;
+        swatch.addEventListener("click", e => {
+            e.stopPropagation();
+            applyColor(item, c.key);
+            closeColorMenu();
+        });
+        popover.appendChild(swatch);
+    }
+    let clearSwatch = document.createElement("div");
+    clearSwatch.className = "menu-swatch swatch-clear";
+    clearSwatch.addEventListener("click", e => {
+        e.stopPropagation();
+        applyColor(item, null);
+        closeColorMenu();
+    });
+    popover.appendChild(clearSwatch);
+    let rect = menuBtn.getBoundingClientRect();
+    popover.style.left = rect.left + "px";
+    popover.style.top = (rect.bottom + 4) + "px";
+    document.body.appendChild(popover);
+}
+
 // Link Rendering
 
 let urlPattern = /\b[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s]+/g;
@@ -403,6 +486,7 @@ function serialize(container) {
             id: item.dataset.id,
             text: getTextEl(item).textContent,
             collapsed: item.classList.contains("collapsed"),
+            color: item.dataset.color || null,
             children: serialize(getChildrenEl(item)),
         });
     }
@@ -411,7 +495,7 @@ function serialize(container) {
 
 function deserialize(items, container) {
     for (let data of items) {
-        let item = createItem(data.text);
+        let item = createItem(data.text, data.color);
         item.dataset.id = data.id;
         if (data.collapsed) {
             item.classList.add("collapsed");
@@ -827,6 +911,12 @@ function setupEvents() {
         if (selectedItems.length > 0 && !e.shiftKey) {
             clearSelection();
         }
+        if (e.target.classList.contains("menu-btn")) {
+            e.stopPropagation();
+            let item = e.target.closest(".item");
+            openColorMenu(item);
+            return;
+        }
         if (e.target.classList.contains("toggle")) {
             let item = e.target.closest(".item");
             toggleCollapse(item);
@@ -847,9 +937,40 @@ function setupEvents() {
         handlePaste(e);
     });
     document.addEventListener("keydown", e => {
-        if (e.key === "Escape" && selectedItems.length > 0) {
-            e.preventDefault();
-            clearSelection();
+        if (e.key === "Escape") {
+            if (document.querySelector(".menu-popover")) {
+                e.preventDefault();
+                closeColorMenu();
+                return;
+            }
+            if (selectedItems.length > 0) {
+                e.preventDefault();
+                clearSelection();
+                return;
+            }
+        }
+        if (e.altKey && !e.ctrlKey && !e.metaKey) {
+            let key = e.key.toLowerCase();
+            if (key === "c") {
+                let focused = document.activeElement;
+                if (focused && focused.classList.contains("text")) {
+                    e.preventDefault();
+                    applyColor(focused.closest(".item"), null);
+                }
+                return;
+            }
+            if (colorShortcuts[key]) {
+                let focused = document.activeElement;
+                if (focused && focused.classList.contains("text")) {
+                    e.preventDefault();
+                    applyColor(focused.closest(".item"), colorShortcuts[key]);
+                }
+            }
+        }
+    });
+    document.addEventListener("click", e => {
+        if (!e.target.closest(".menu-popover") && !e.target.classList.contains("menu-btn")) {
+            closeColorMenu();
         }
     });
     let breadcrumb = document.getElementById("breadcrumb");

@@ -70,17 +70,15 @@ function hasChildren(item) {
 
 function getPrevItem(item) {
     let prev = item.previousElementSibling;
-    while (prev && !prev.classList.contains("item")) {
+    while (prev && !prev.classList.contains("item"))
         prev = prev.previousElementSibling;
-    }
     return prev;
 }
 
 function getNextItem(item) {
     let next = item.nextElementSibling;
-    while (next && !next.classList.contains("item")) {
+    while (next && !next.classList.contains("item"))
         next = next.nextElementSibling;
-    }
     return next;
 }
 
@@ -135,21 +133,18 @@ function updateToggle(item) {
 // Multi-Select Helpers
 
 function clearSelection() {
-    for (let item of selectedItems) {
+    for (let item of selectedItems)
         item.classList.remove("selected");
-    }
     selectedItems = [];
     selectionAnchor = null;
 }
 
 function setSelection(items) {
-    for (let item of selectedItems) {
+    for (let item of selectedItems)
         item.classList.remove("selected");
-    }
     selectedItems = items;
-    for (let item of items) {
+    for (let item of items)
         item.classList.add("selected");
-    }
 }
 
 function getSiblingItems(container) {
@@ -257,9 +252,8 @@ function handleTabMulti() {
     }
     let prevChildrenEl = getChildrenEl(prevItem);
     let oldParent = getParentItem(firstItem);
-    for (let item of selectedItems) {
+    for (let item of selectedItems)
         prevChildrenEl.appendChild(item);
-    }
     updateToggle(prevItem);
     if (oldParent) updateToggle(oldParent);
     save();
@@ -281,9 +275,8 @@ function handleShiftTabMulti() {
     }
     // Move following siblings into last selected item's children
     let lastChildrenEl = getChildrenEl(lastItem);
-    for (let s of followingSiblings) {
+    for (let s of followingSiblings)
         lastChildrenEl.appendChild(s);
-    }
     // Move all selected items after parentItem in grandparent
     let insertRef = parentItem.nextSibling;
     for (let item of selectedItems) {
@@ -291,9 +284,8 @@ function handleShiftTabMulti() {
         insertRef = item.nextSibling;
     }
     updateToggle(parentItem);
-    for (let item of selectedItems) {
+    for (let item of selectedItems)
         updateToggle(item);
-    }
     save();
 }
 
@@ -302,19 +294,16 @@ function handleDeleteMulti() {
     let lastItem = selectedItems[selectedItems.length - 1];
     // Find focus target
     let prevSibling = getPrevItem(firstItem);
-    while (prevSibling && selectedItems.includes(prevSibling)) {
+    while (prevSibling && selectedItems.includes(prevSibling))
         prevSibling = getPrevItem(prevSibling);
-    }
     let nextSibling = getNextItem(lastItem);
-    while (nextSibling && selectedItems.includes(nextSibling)) {
+    while (nextSibling && selectedItems.includes(nextSibling))
         nextSibling = getNextItem(nextSibling);
-    }
     let parentItem = getParentItem(firstItem);
     let focusTarget = prevSibling || nextSibling || parentItem;
     // Remove all selected items
-    for (let item of selectedItems) {
+    for (let item of selectedItems)
         item.remove();
-    }
     clearSelection();
     if (parentItem) updateToggle(parentItem);
     // Handle empty outline
@@ -366,9 +355,8 @@ function closeColorMenu() {
 
 function applyColor(item, color) {
     let textEl = getTextEl(item);
-    for (let c of colorChoices) {
+    for (let c of colorChoices)
         textEl.classList.remove("bg-" + c.key);
-    }
     if (color) {
         item.dataset.color = color;
         textEl.classList.add("bg-" + color);
@@ -383,9 +371,8 @@ function itemToText(item, indent) {
     let prefix = "  ".repeat(indent);
     let result = prefix + "- " + text + "\n";
     let childrenEl = getChildrenEl(item);
-    for (let child of childrenEl.querySelectorAll(":scope > .item")) {
+    for (let child of childrenEl.querySelectorAll(":scope > .item"))
         result += itemToText(child, indent + 1);
-    }
     return result;
 }
 
@@ -480,9 +467,8 @@ function stripLinks(textEl) {
 
 function renderAllLinks() {
     let allTexts = document.querySelectorAll("#outline .text");
-    for (let textEl of allTexts) {
+    for (let textEl of allTexts)
         renderLinks(textEl);
-    }
 }
 
 // Cursor Helpers
@@ -564,9 +550,8 @@ function load() {
 function applyZoom() {
     let outline = document.getElementById("outline");
     let els = outline.querySelectorAll(".zoom-root, .zoom-ancestor, .zoom-hidden");
-    for (let el of els) {
+    for (let el of els)
         el.classList.remove("zoom-root", "zoom-ancestor", "zoom-hidden");
-    }
     let breadcrumb = document.getElementById("breadcrumb");
     breadcrumb.innerHTML = "";
     if (!zoomedId) {
@@ -711,9 +696,8 @@ function handleBackspace(e) {
         let firstChildText = children.length > 0 ? getTextEl(children[0]) : null;
         let idx = firstChildText ? visibleItems.indexOf(firstChildText) : -1;
         let prevTextEl = idx > 0 ? visibleItems[idx - 1] : null;
-        for (let child of children) {
+        for (let child of children)
             parentContainer.insertBefore(child, nextSibling);
-        }
         item.remove();
         if (parentItem) updateToggle(parentItem);
         if (prevTextEl) {
@@ -730,9 +714,8 @@ function handleBackspace(e) {
         prevTextEl.textContent += text;
         let children = Array.from(childrenEl.querySelectorAll(":scope > .item"));
         let prevChildrenEl = getChildrenEl(prevItem);
-        for (let child of children) {
+        for (let child of children)
             prevChildrenEl.appendChild(child);
-        }
         let parentItem = getParentItem(item);
         item.remove();
         if (parentItem) updateToggle(parentItem);
@@ -780,9 +763,8 @@ function handleShiftTab(e) {
         sibling = getNextItem(sibling);
     }
     let childrenEl = getChildrenEl(item);
-    for (let s of nextSiblings) {
+    for (let s of nextSiblings)
         childrenEl.appendChild(s);
-    }
     grandparentContainer.insertBefore(item, parentItem.nextSibling);
     updateToggle(parentItem);
     updateToggle(item);

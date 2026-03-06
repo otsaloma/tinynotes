@@ -1,5 +1,5 @@
 // -*- coding: utf-8-unix -*-
-/* global crypto, document, localStorage, window */
+/* global crypto, document, localStorage, navigator, window */
 
 let zoomedId = null;
 let selectedItems = [];
@@ -388,24 +388,27 @@ function copyAsText(item) {
     navigator.clipboard.writeText(text);
 }
 
+function createSwatch(item, c) {
+    let swatch = document.createElement("div");
+    swatch.className = "menu-swatch";
+    swatch.style.backgroundColor = c.value;
+    swatch.dataset.color = c.key;
+    swatch.addEventListener("click", e => {
+        e.stopPropagation();
+        applyColor(item, c.key);
+        closeColorMenu();
+    });
+    return swatch;
+}
+
 function openColorMenu(item) {
     closeColorMenu();
     let menuBtn = item.querySelector(":scope > .row > .menu-btn");
     menuBtn.classList.add("active");
     let popover = document.createElement("div");
     popover.className = "menu-popover";
-    for (let c of colorChoices) {
-        let swatch = document.createElement("div");
-        swatch.className = "menu-swatch";
-        swatch.style.backgroundColor = c.value;
-        swatch.dataset.color = c.key;
-        swatch.addEventListener("click", e => {
-            e.stopPropagation();
-            applyColor(item, c.key);
-            closeColorMenu();
-        });
-        popover.appendChild(swatch);
-    }
+    for (let c of colorChoices)
+        popover.appendChild(createSwatch(item, c));
     let clearSwatch = document.createElement("div");
     clearSwatch.className = "menu-swatch swatch-clear";
     clearSwatch.addEventListener("click", e => {

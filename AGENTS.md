@@ -10,6 +10,7 @@ The main implementation is in files `index.css`, `index.html` and
 
 ## General
 
+* Always run `make check` after your changes
 * Don't worry about catching errors (as we have no real users)
 * Don't worry about data migrations (as we have no real users)
 
@@ -20,11 +21,15 @@ The main implementation is in files `index.css`, `index.html` and
 
 ## JavaScript
 
+* Avoid blank lines inside short functions
 * Indent with four spaces
 * Minimize the amount of libraries used
 * No frameworks!
+* Skip curly braces with single-line for and while loops
 * Skip parameter parantheses in single-argument arrow functions
+* Use const instead of let whenever applicable
 * Use double-quotes for strings
+* Use template strings instead of plus sign string concatenation
 * Use vanilla JavaScript and browser web APIs
 * You can use any JavaScript features that run as-is in latest browsers
 

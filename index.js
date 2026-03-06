@@ -294,7 +294,6 @@ function handleShiftTabMulti() {
 function handleDeleteMulti() {
     let firstItem = selectedItems[0];
     let lastItem = selectedItems[selectedItems.length - 1];
-    let container = firstItem.parentElement;
     // Find focus target
     let prevSibling = getPrevItem(firstItem);
     while (prevSibling && selectedItems.includes(prevSibling)) {

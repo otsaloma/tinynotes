@@ -1,6 +1,12 @@
 // -*- coding: utf-8-unix -*-
 /* global crypto, document, localStorage, navigator, window */
 
+const ELLIPSIS = "\u22ef";
+const NBSP = "\u00a0";
+const BULLET = "\u2022";
+const TRIANGLE_RIGHT = "\u25b6";
+const TRIANGLE_DOWN = "\u25bc";
+
 let zoomedId = null;
 let selectedItems = [];
 let selectionAnchor = null;
@@ -20,13 +26,13 @@ function createItem(text, color) {
     row.className = "row";
     let menuBtn = document.createElement("span");
     menuBtn.className = "menu-btn";
-    menuBtn.textContent = "\u22ef";
+    menuBtn.textContent = ELLIPSIS;
     let toggle = document.createElement("span");
     toggle.className = "toggle";
-    toggle.textContent = "\u00a0";
+    toggle.textContent = NBSP;
     let bullet = document.createElement("span");
     bullet.className = "bullet";
-    bullet.textContent = "\u2022";
+    bullet.textContent = BULLET;
     let textEl = document.createElement("div");
     textEl.className = "text";
     textEl.contentEditable = "true";
@@ -120,9 +126,9 @@ function getVisibleItems() {
 function updateToggle(item) {
     let toggle = item.querySelector(":scope > .row > .toggle");
     if (hasChildren(item)) {
-        toggle.textContent = item.classList.contains("collapsed") ? "\u25b6" : "\u25bc";
+        toggle.textContent = item.classList.contains("collapsed") ? TRIANGLE_RIGHT : TRIANGLE_DOWN;
     } else {
-        toggle.textContent = "\u00a0";
+        toggle.textContent = NBSP;
     }
 }
 

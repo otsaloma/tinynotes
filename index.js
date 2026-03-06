@@ -39,7 +39,7 @@ function createItem(text, color) {
     textEl.textContent = text || "";
     if (color) {
         item.dataset.color = color;
-        textEl.classList.add("bg-" + color);
+        textEl.classList.add(`bg-${color}`);
     }
     row.appendChild(menuBtn);
     row.appendChild(toggle);
@@ -53,7 +53,7 @@ function createItem(text, color) {
 }
 
 function getItemEl(id) {
-    return document.querySelector(".item[data-id=\"" + id + "\"]");
+    return document.querySelector(`.item[data-id="${id}"]`);
 }
 
 function getTextEl(item) {
@@ -356,10 +356,10 @@ function closeColorMenu() {
 function applyColor(item, color) {
     const textEl = getTextEl(item);
     for (const c of colorChoices)
-        textEl.classList.remove("bg-" + c.key);
+        textEl.classList.remove(`bg-${c.key}`);
     if (color) {
         item.dataset.color = color;
-        textEl.classList.add("bg-" + color);
+        textEl.classList.add(`bg-${color}`);
     } else {
         delete item.dataset.color;
     }
@@ -369,7 +369,7 @@ function applyColor(item, color) {
 function itemToText(item, indent) {
     const text = getTextEl(item).textContent;
     const prefix = "  ".repeat(indent);
-    let result = prefix + "- " + text + "\n";
+    let result = `${prefix}- ${text}\n`;
     const childrenEl = getChildrenEl(item);
     for (const child of childrenEl.querySelectorAll(":scope > .item"))
         result += itemToText(child, indent + 1);
@@ -423,8 +423,8 @@ function openColorMenu(item) {
     });
     popover.appendChild(copyBtn);
     const rect = menuBtn.getBoundingClientRect();
-    popover.style.left = rect.left + "px";
-    popover.style.top = (rect.bottom + 4) + "px";
+    popover.style.left = `${rect.left}px`;
+    popover.style.top = `${rect.bottom + 4}px`;
     document.body.appendChild(popover);
 }
 

@@ -29,7 +29,7 @@ The main implementation is in files `index.css`, `index.html` and
 * Skip parameter parantheses in single-argument arrow functions
 * Use const instead of let whenever applicable
 * Use double-quotes for strings
-* Use template strings instead of plus sign string concatenation
+* Use template literal strings instead of plus sign string concatenation
 * Use vanilla JavaScript and browser web APIs
 * You can use any JavaScript features that run as-is in latest browsers
 

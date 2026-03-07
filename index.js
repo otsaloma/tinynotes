@@ -879,6 +879,26 @@ function setupEvents() {
         if (!e.target.classList.contains("text")) return;
         if (e.key === "Enter") {
             handleEnter(e);
+        } else if (e.key === "Backspace" && e.shiftKey) {
+            e.preventDefault();
+            const textEl = e.target;
+            const item = textEl.closest(".item");
+            const visibleItems = getVisibleItems();
+            const idx = visibleItems.indexOf(textEl);
+            const prevTextEl = idx > 0 ? visibleItems[idx - 1] : null;
+            const parentItem = getParentItem(item);
+            item.remove();
+            if (parentItem) updateToggle(parentItem);
+            const outline = document.getElementById("outline");
+            if (!outline.querySelector(".item")) {
+                const newItem = createItem("");
+                outline.appendChild(newItem);
+                getTextEl(newItem).focus();
+            } else if (prevTextEl) {
+                prevTextEl.focus();
+                setCursorPos(prevTextEl, prevTextEl.textContent.length);
+            }
+            save();
         } else if (e.key === "Backspace") {
             handleBackspace(e);
         } else if (e.key === "Tab" && !e.shiftKey) {

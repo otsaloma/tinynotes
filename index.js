@@ -349,7 +349,7 @@ function applyColor(item, color) {
 
 function itemToText(item, indent) {
     const text = getTextEl(item).textContent;
-    const prefix = "  ".repeat(indent);
+    const prefix = "    ".repeat(indent);
     let result = `${prefix}- ${text}\n`;
     const childrenEl = getChildrenEl(item);
     for (const child of childrenEl.querySelectorAll(":scope > .item"))
@@ -750,6 +750,24 @@ function toggleCollapse(item) {
 
 // Paste Handling
 
+function detectIndentUnit(lines) {
+    let min = Infinity;
+    for (const line of lines) {
+        const raw = line.replace(/\t/g, "    ");
+        const ws = raw.match(/^(\s*)/)[1].length;
+        if (ws > 0 && ws < min) min = ws;
+    }
+    return min === Infinity ? 4 : min;
+}
+
+function parseLine(line, indentUnit) {
+    const normalized = line.replace(/\t/g, "    ");
+    const m = normalized.match(/^(\s*)([-*•]\s+)?(.*)/);
+    const level = indentUnit > 0 ? Math.floor(m[1].length / indentUnit) : 0;
+    const text = (m[3] || "").trim();
+    return { level, text };
+}
+
 function handlePaste(e) {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
@@ -763,14 +781,31 @@ function handlePaste(e) {
     } else {
         const before = content.slice(0, pos);
         const after = content.slice(pos);
-        textEl.textContent = before + lines[0].trim();
+        const indentUnit = detectIndentUnit(lines);
+        const parsed = lines.map(l => parseLine(l, indentUnit));
+        const baseLevel = parsed[0].level;
+        for (const p of parsed) p.level -= baseLevel;
+        for (let i = 1; i < parsed.length; i++)
+            parsed[i].level = Math.min(parsed[i].level, parsed[i - 1].level + 1);
+        for (const p of parsed) p.level = Math.max(0, p.level);
+        textEl.textContent = before + parsed[0].text;
         const item = textEl.closest(".item");
-        const parent = item.parentElement;
-        const ref = item.nextSibling;
+        const itemAtLevel = [item];
         let lastItem = item;
-        for (let i = 1; i < lines.length; i++) {
-            const newItem = createItem(lines[i].trim());
-            parent.insertBefore(newItem, ref);
+        for (let i = 1; i < parsed.length; i++) {
+            const { level, text: lineText } = parsed[i];
+            const newItem = createItem(lineText);
+            if (level === 0) {
+                const parent = item.parentElement;
+                const ref = item.nextSibling;
+                parent.insertBefore(newItem, ref);
+            } else {
+                const parentItem = itemAtLevel[level - 1];
+                getChildrenEl(parentItem).appendChild(newItem);
+                updateToggle(parentItem);
+            }
+            itemAtLevel[level] = newItem;
+            itemAtLevel.length = level + 1;
             lastItem = newItem;
         }
         const lastTextEl = getTextEl(lastItem);

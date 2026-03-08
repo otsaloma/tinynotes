@@ -161,6 +161,22 @@ body {
 .text.bg-violet { background-color: var(--color-bg-violet); }
 .text.bg-yellow { background-color: var(--color-bg-yellow); }
 
+/* Toast */
+
+#toast {
+  background-color: var(--color-text);
+  border-radius: 999px;
+  color: white;
+  font-size: var(--font-size-small);
+  left: 50%;
+  opacity: 1;
+  padding: 0.5rem 1rem;
+  position: fixed;
+  top: 2rem;
+  transition: opacity 0.3s ease;
+  z-index: 1000;
+}
+
 /* Help */
 
 #help {

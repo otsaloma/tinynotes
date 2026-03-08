@@ -375,6 +375,21 @@ function itemToText(item, indent) {
 function copyAsText(item) {
     const text = itemToText(item, 0);
     navigator.clipboard.writeText(text);
+    notify("Copied");
+}
+
+let notifyTimeout;
+function notify(message) {
+    let toast = document.getElementById("toast");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "toast";
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.style.opacity = "1";
+    clearTimeout(notifyTimeout);
+    notifyTimeout = setTimeout(() => { toast.style.opacity = "0"; }, 1500);
 }
 
 // Link Rendering
@@ -569,12 +584,14 @@ function undo() {
     if (undoStack.length === 0) return;
     redoStack.push(captureState());
     restoreState(undoStack.pop());
+    notify("Undo");
 }
 
 function redo() {
     if (redoStack.length === 0) return;
     undoStack.push(captureState());
     restoreState(redoStack.pop());
+    notify("Redo");
 }
 
 // Zoom

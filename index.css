@@ -12,8 +12,8 @@
   --color-selection: #3266d0;
   --color-text: #374151;
   --font-family-monospace: Berkeley Mono, SF Mono, IBM Plex Mono, ui-monospace, monospace;
-  --font-size-main: 16px;
-  --font-size-small: 14px;
+  --font-size-main: 15px;
+  --font-size-small: 13px;
 }
 
 html {
@@ -70,7 +70,6 @@ body {
   bottom: -2px;
   cursor: pointer;
   flex-shrink: 0;
-  font-size: 16px;
   opacity: 0.5;
   position: relative;
   user-select: none;

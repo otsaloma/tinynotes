@@ -78,10 +78,35 @@ body {
 }
 
 .bullet {
-  cursor: pointer;
+  cursor: grab;
   flex-shrink: 0;
   margin-right: 12px;
   user-select: none;
+}
+
+.item.dragging {
+  opacity: 0.3;
+}
+
+.drag-indicator {
+  background-color: var(--color-selection);
+  display: none;
+  height: 2px;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 100;
+}
+
+.drag-indicator::before {
+  background-color: var(--color-selection);
+  border-radius: 50%;
+  content: "";
+  height: 6px;
+  left: -3px;
+  position: absolute;
+  top: -2px;
+  width: 6px;
 }
 
 .text {

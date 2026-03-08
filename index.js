@@ -6,6 +6,8 @@ const NBSP = "\u00a0";
 const TRIANGLE_DOWN = "\u25bc";
 const TRIANGLE_RIGHT = "\u25b6";
 
+let dragState = null;
+let dragDidDrop = false;
 let selectedItems = [];
 let selectionAnchor = null;
 let suppressSelectionClear = false;
@@ -779,6 +781,73 @@ function handlePaste(e) {
     save();
 }
 
+// Drag and Drop
+
+function findDropTarget(y) {
+    const visibleItems = getVisibleItems();
+    for (const textEl of visibleItems) {
+        const item = textEl.closest(".item");
+        if (item === dragState.item || dragState.item.contains(item)) continue;
+        const row = item.querySelector(":scope > .row");
+        const rect = row.getBoundingClientRect();
+        if (y < rect.top || y > rect.bottom) continue;
+        const quarter = rect.height / 4;
+        if (hasChildren(item) && !item.classList.contains("collapsed") && y > rect.bottom - quarter) {
+            return { referenceItem: item, position: "child" };
+        }
+        if (y < rect.top + rect.height / 2) {
+            return { referenceItem: item, position: "before" };
+        }
+        return { referenceItem: item, position: "after" };
+    }
+    return null;
+}
+
+function showDropIndicator(indicator, target) {
+    const row = target.referenceItem.querySelector(":scope > .row");
+    const rect = row.getBoundingClientRect();
+    let top;
+    let left;
+    if (target.position === "before") {
+        top = rect.top;
+        left = rect.left;
+    } else if (target.position === "after") {
+        top = rect.bottom;
+        left = rect.left;
+    } else {
+        // "child" — indent one level deeper
+        top = rect.bottom;
+        const childrenEl = getChildrenEl(target.referenceItem);
+        const childrenRect = childrenEl.getBoundingClientRect();
+        left = childrenRect.left;
+    }
+    indicator.style.top = `${top + window.scrollY}px`;
+    indicator.style.left = `${left}px`;
+    indicator.style.width = `${rect.right - left}px`;
+    indicator.style.display = "block";
+}
+
+function hideDropIndicator(indicator) {
+    indicator.style.display = "none";
+}
+
+function performDrop(draggedItem, target) {
+    const ref = target.referenceItem;
+    if (target.position === "before") {
+        ref.parentElement.insertBefore(draggedItem, ref);
+    } else if (target.position === "after") {
+        ref.parentElement.insertBefore(draggedItem, ref.nextSibling);
+    } else {
+        const childrenEl = getChildrenEl(ref);
+        childrenEl.insertBefore(draggedItem, childrenEl.firstChild);
+    }
+    // Update toggles on old and new parents
+    const allItems = document.querySelectorAll("#outline .item");
+    for (const item of allItems)
+        updateToggle(item);
+    save();
+}
+
 // Event Handling
 
 function setupEvents() {
@@ -863,6 +932,10 @@ function setupEvents() {
             window.open(e.target.href, "_blank", "noopener");
             return;
         }
+        if (e.target.classList.contains("bullet") && e.button === 0) {
+            const item = e.target.closest(".item");
+            dragState = { item, startX: e.clientX, startY: e.clientY, isDragging: false };
+        }
     });
     outline.addEventListener("focusin", e => {
         if (!e.target.classList.contains("text")) return;
@@ -913,6 +986,10 @@ function setupEvents() {
             const item = e.target.closest(".item");
             toggleCollapse(item);
         } else if (e.target.classList.contains("bullet")) {
+            if (dragDidDrop) {
+                dragDidDrop = false;
+                return;
+            }
             const item = e.target.closest(".item");
             zoomTo(item.dataset.id);
             if (!hasChildren(item)) {
@@ -970,6 +1047,43 @@ function setupEvents() {
         const crumbItem = e.target.closest(".breadcrumb-item");
         if (!crumbItem) return;
         zoomTo(crumbItem.dataset.id);
+    });
+    const dragIndicator = document.createElement("div");
+    dragIndicator.className = "drag-indicator";
+    document.body.appendChild(dragIndicator);
+    document.addEventListener("mousemove", e => {
+        if (!dragState) return;
+        const dx = e.clientX - dragState.startX;
+        const dy = e.clientY - dragState.startY;
+        if (!dragState.isDragging) {
+            if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+            dragState.isDragging = true;
+            dragState.item.classList.add("dragging");
+            document.body.style.userSelect = "none";
+        }
+        const target = findDropTarget(e.clientY);
+        if (target) {
+            showDropIndicator(dragIndicator, target);
+        } else {
+            hideDropIndicator(dragIndicator);
+        }
+    });
+    document.addEventListener("mouseup", e => {
+        if (!dragState) return;
+        if (dragState.isDragging) {
+            e.preventDefault();
+            dragState.item.classList.remove("dragging");
+            document.body.style.userSelect = "";
+            hideDropIndicator(dragIndicator);
+            const target = findDropTarget(e.clientY);
+            if (target) {
+                const oldParent = getParentItem(dragState.item);
+                performDrop(dragState.item, target);
+                if (oldParent) updateToggle(oldParent);
+            }
+            dragDidDrop = true;
+        }
+        dragState = null;
     });
 }
 

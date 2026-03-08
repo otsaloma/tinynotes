@@ -2,6 +2,12 @@
 
 :root {
   --color-background: #fafafa;
+  --color-bg-blue: #c3ddfd;
+  --color-bg-green: #bbefd9;
+  --color-bg-orange: #fbd8bc;
+  --color-bg-red: #f7d4fa;
+  --color-bg-violet: #d8d3f9;
+  --color-bg-yellow: #f8e568;
   --color-link: #3584e4;
   --color-selection: #3266d0;
   --color-text: #374151;
@@ -124,12 +130,12 @@ body {
   flex: 0 1 auto;
 }
 
-.text.bg-blue   { background-color: #c3ddfd; }
-.text.bg-green  { background-color: #bbefd9; }
-.text.bg-orange { background-color: #fbd8bc; }
-.text.bg-red    { background-color: #f7d4fa; }
-.text.bg-violet { background-color: #d8d3f9; }
-.text.bg-yellow { background-color: #f8e568; }
+.text.bg-blue   { background-color: var(--color-bg-blue); }
+.text.bg-green  { background-color: var(--color-bg-green); }
+.text.bg-orange { background-color: var(--color-bg-orange); }
+.text.bg-red    { background-color: var(--color-bg-red); }
+.text.bg-violet { background-color: var(--color-bg-violet); }
+.text.bg-yellow { background-color: var(--color-bg-yellow); }
 
 /* Ellipsis menu */
 

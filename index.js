@@ -326,14 +326,7 @@ function handleDeleteMulti() {
 
 // Color Menu
 
-const COLOR_CHOICES = [
-    { key: "yellow", value: "#f8e568" },
-    { key: "orange", value: "#fbd8bc" },
-    { key: "red", value: "#f7d4fa" },
-    { key: "violet", value: "#d8d3f9" },
-    { key: "blue", value: "#c3ddfd" },
-    { key: "green", value: "#bbefd9" },
-];
+const COLOR_CHOICES = ["yellow", "orange", "red", "violet", "blue", "green"];
 
 const COLOR_SHORTCUTS = {
     "y": "yellow",
@@ -354,7 +347,7 @@ function closeColorMenu() {
 function applyColor(item, color) {
     const textEl = getTextEl(item);
     for (const c of COLOR_CHOICES)
-        textEl.classList.remove(`bg-${c.key}`);
+        textEl.classList.remove(`bg-${c}`);
     if (color) {
         item.dataset.color = color;
         textEl.classList.add(`bg-${color}`);
@@ -382,11 +375,11 @@ function copyAsText(item) {
 function createSwatch(item, c) {
     const swatch = document.createElement("div");
     swatch.className = "menu-swatch";
-    swatch.style.backgroundColor = c.value;
-    swatch.dataset.color = c.key;
+    swatch.style.backgroundColor = `var(--color-bg-${c})`;
+    swatch.dataset.color = c;
     swatch.addEventListener("click", e => {
         e.stopPropagation();
-        applyColor(item, c.key);
+        applyColor(item, c);
         closeColorMenu();
     });
     return swatch;

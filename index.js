@@ -13,6 +13,13 @@ let selectionAnchor = null;
 let suppressSelectionClear = false;
 let zoomedId = null;
 
+const UNDO_LIMIT = 100;
+let undoStack = [];
+let redoStack = [];
+let focusEntryState = null;
+let focusEntryText = null;
+let focusEntryItemId = null;
+
 // DOM Helpers
 
 function generateId() {
@@ -241,6 +248,8 @@ function handleShiftArrowUp(e) {
 }
 
 function handleTabMulti() {
+    commitTextCheckpoint();
+    pushUndo();
     const firstItem = selectedItems[0];
     const prevItem = getPrevItem(firstItem);
     if (!prevItem || selectedItems.includes(prevItem)) return;
@@ -257,6 +266,8 @@ function handleTabMulti() {
 }
 
 function handleShiftTabMulti() {
+    commitTextCheckpoint();
+    pushUndo();
     const firstItem = selectedItems[0];
     const lastItem = selectedItems[selectedItems.length - 1];
     const parentItem = getParentItem(firstItem);
@@ -287,6 +298,8 @@ function handleShiftTabMulti() {
 }
 
 function handleDeleteMulti() {
+    commitTextCheckpoint();
+    pushUndo();
     const firstItem = selectedItems[0];
     const lastItem = selectedItems[selectedItems.length - 1];
     // Find focus target
@@ -335,6 +348,8 @@ const COLOR_SHORTCUTS = {
 };
 
 function applyColor(item, color) {
+    commitTextCheckpoint();
+    pushUndo();
     const textEl = getTextEl(item);
     for (const c of COLOR_CHOICES)
         textEl.classList.remove(`bg-${c}`);
@@ -479,6 +494,89 @@ function load() {
     return JSON.parse(raw);
 }
 
+// Undo/Redo
+
+function captureState() {
+    const outline = document.getElementById("outline");
+    const state = {
+        items: serialize(outline),
+        zoomedId: zoomedId,
+        focusId: null,
+        cursorPos: 0,
+    };
+    const focused = document.activeElement;
+    if (focused && focused.classList.contains("text")) {
+        state.focusId = focused.closest(".item").dataset.id;
+        state.cursorPos = getCursorPos(focused);
+    }
+    return state;
+}
+
+function pushUndo(state) {
+    undoStack.push(state || captureState());
+    if (undoStack.length > UNDO_LIMIT)
+        undoStack.splice(0, undoStack.length - UNDO_LIMIT);
+    redoStack = [];
+}
+
+function commitTextCheckpoint() {
+    if (!focusEntryState) return false;
+    const item = focusEntryItemId ? getItemEl(focusEntryItemId) : null;
+    const currentText = item ? getTextEl(item).textContent : null;
+    if (currentText !== focusEntryText) {
+        undoStack.push(focusEntryState);
+        if (undoStack.length > UNDO_LIMIT)
+            undoStack.splice(0, undoStack.length - UNDO_LIMIT);
+        redoStack = [];
+        focusEntryState = null;
+        focusEntryText = null;
+        focusEntryItemId = null;
+        return true;
+    }
+    focusEntryState = null;
+    focusEntryText = null;
+    focusEntryItemId = null;
+    return false;
+}
+
+function restoreState(state) {
+    const outline = document.getElementById("outline");
+    outline.innerHTML = "";
+    deserialize(state.items, outline);
+    zoomedId = state.zoomedId || null;
+    applyZoom();
+    renderAllLinks();
+    save();
+    focusEntryState = null;
+    focusEntryText = null;
+    focusEntryItemId = null;
+    if (state.focusId) {
+        const item = getItemEl(state.focusId);
+        if (item) {
+            const textEl = getTextEl(item);
+            stripLinks(textEl);
+            textEl.focus();
+            setCursorPos(textEl, state.cursorPos);
+            focusEntryState = captureState();
+            focusEntryText = textEl.textContent;
+            focusEntryItemId = state.focusId;
+        }
+    }
+}
+
+function undo() {
+    commitTextCheckpoint();
+    if (undoStack.length === 0) return;
+    redoStack.push(captureState());
+    restoreState(undoStack.pop());
+}
+
+function redo() {
+    if (redoStack.length === 0) return;
+    undoStack.push(captureState());
+    restoreState(redoStack.pop());
+}
+
 // Zoom
 
 function applyZoom() {
@@ -549,6 +647,8 @@ function applyZoom() {
 }
 
 function zoomTo(id) {
+    commitTextCheckpoint();
+    pushUndo();
     zoomedId = id === "root" ? null : id;
     applyZoom();
     save();
@@ -558,6 +658,8 @@ function zoomTo(id) {
 
 function handleEnter(e) {
     e.preventDefault();
+    commitTextCheckpoint();
+    pushUndo();
     const textEl = e.target;
     const item = textEl.closest(".item");
     const cursorPos = getCursorPos(textEl);
@@ -607,6 +709,8 @@ function handleBackspace(e) {
     const sel = window.getSelection();
     if (!sel.isCollapsed) return;
     e.preventDefault();
+    commitTextCheckpoint();
+    pushUndo();
     const text = textEl.textContent;
     const childrenEl = getChildrenEl(item);
     if (text === "" && !hasChildren(item)) {
@@ -670,6 +774,8 @@ function handleBackspace(e) {
 
 function handleTab(e) {
     e.preventDefault();
+    commitTextCheckpoint();
+    pushUndo();
     const textEl = e.target;
     const item = textEl.closest(".item");
     const prevItem = getPrevItem(item);
@@ -690,6 +796,8 @@ function handleTab(e) {
 
 function handleShiftTab(e) {
     e.preventDefault();
+    commitTextCheckpoint();
+    pushUndo();
     const textEl = e.target;
     const item = textEl.closest(".item");
     const parentItem = getParentItem(item);
@@ -743,6 +851,8 @@ function handleArrowDown(e) {
 
 function toggleCollapse(item) {
     if (!hasChildren(item)) return;
+    commitTextCheckpoint();
+    pushUndo();
     item.classList.toggle("collapsed");
     updateToggle(item);
     save();
@@ -770,6 +880,8 @@ function parseLine(line, indentUnit) {
 
 function handlePaste(e) {
     e.preventDefault();
+    commitTextCheckpoint();
+    pushUndo();
     const text = e.clipboardData.getData("text/plain");
     const lines = text.split("\n").filter(l => l.trim() !== "");
     const textEl = e.target;
@@ -867,6 +979,8 @@ function hideDropIndicator(indicator) {
 }
 
 function performDrop(draggedItem, target) {
+    commitTextCheckpoint();
+    pushUndo();
     const ref = target.referenceItem;
     if (target.position === "before") {
         ref.parentElement.insertBefore(draggedItem, ref);
@@ -925,6 +1039,8 @@ function setupEvents() {
             handleEnter(e);
         } else if (e.key === "Backspace" && e.shiftKey) {
             e.preventDefault();
+            commitTextCheckpoint();
+            pushUndo();
             const textEl = e.target;
             const item = textEl.closest(".item");
             const visibleItems = getVisibleItems();
@@ -980,9 +1096,13 @@ function setupEvents() {
             clearSelection();
         }
         stripLinks(e.target);
+        focusEntryItemId = e.target.closest(".item").dataset.id;
+        focusEntryText = e.target.textContent;
+        focusEntryState = captureState();
     });
     outline.addEventListener("focusout", e => {
         if (!e.target.classList.contains("text")) return;
+        commitTextCheckpoint();
         renderLinks(e.target);
     });
     outline.addEventListener("click", e => {
@@ -1028,6 +1148,7 @@ function setupEvents() {
             const item = e.target.closest(".item");
             zoomTo(item.dataset.id);
             if (!hasChildren(item)) {
+                pushUndo();
                 const newItem = createItem("");
                 getChildrenEl(item).appendChild(newItem);
                 updateToggle(item);
@@ -1040,7 +1161,15 @@ function setupEvents() {
         if (!e.target.classList.contains("text")) return;
         handlePaste(e);
     });
+    outline.addEventListener("beforeinput", e => {
+        if (e.inputType === "historyUndo" || e.inputType === "historyRedo")
+            e.preventDefault();
+    });
     document.addEventListener("keydown", e => {
+        if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+            if (e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
+            if ((e.key === "z" && e.shiftKey) || e.key === "y") { e.preventDefault(); redo(); return; }
+        }
         if (e.key === "Escape") {
             if (selectedItems.length > 0) {
                 e.preventDefault();
@@ -1126,6 +1255,8 @@ function setupEvents() {
 
 function createHelp() {
     const shortcuts = [
+        ["Ctrl+Z", "Undo"],
+        ["Ctrl+Shift+Z", "Redo"],
         ["Tab", "Indent"],
         ["Shift+Tab", "Dedent"],
         ["Shift+Backspace", "Delete"],

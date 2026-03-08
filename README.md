@@ -9,3 +9,11 @@ Lambda function. Tiny Notes is essentially a simplified Workflowy clone.
 There's no hosted version provided, but Tiny Notes is something you
 should be able to easily deploy to your own AWS. It has been designed to
 be very cost efficient and shouldn't cost you more than $1/mo to host.
+
+## Local Development
+
+TODO
+
+## Deployment
+
+TODO

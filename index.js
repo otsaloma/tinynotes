@@ -1,16 +1,16 @@
 // -*- coding: utf-8-unix -*-
 /* global crypto, document, localStorage, navigator, window */
 
+const BULLET = "\u2022";
 const ELLIPSIS = "\u22ef";
 const NBSP = "\u00a0";
-const BULLET = "\u2022";
-const TRIANGLE_RIGHT = "\u25b6";
 const TRIANGLE_DOWN = "\u25bc";
+const TRIANGLE_RIGHT = "\u25b6";
 
-let zoomedId = null;
 let selectedItems = [];
 let selectionAnchor = null;
 let suppressSelectionClear = false;
+let zoomedId = null;
 
 // DOM Helpers
 
@@ -326,24 +326,22 @@ function handleDeleteMulti() {
 
 // Color Menu
 
-const colorChoices = [
-    { key: "yellow", value: "#fef9c3" },
-    { key: "orange", value: "#ffedd5" },
-    { key: "red", value: "#fee2e2" },
-    { key: "violet", value: "#ede9fe" },
-    { key: "blue", value: "#dbeafe" },
-    { key: "green", value: "#dcfce7" },
-    { key: "turquoise", value: "#ccfbf1" },
+const COLOR_CHOICES = [
+    { key: "yellow", value: "#f8e568" },
+    { key: "orange", value: "#fbd8bc" },
+    { key: "red", value: "#f7d4fa" },
+    { key: "violet", value: "#d8d3f9" },
+    { key: "blue", value: "#c3ddfd" },
+    { key: "green", value: "#bbefd9" },
 ];
 
-const colorShortcuts = {
+const COLOR_SHORTCUTS = {
     "y": "yellow",
     "o": "orange",
     "r": "red",
     "v": "violet",
     "b": "blue",
     "g": "green",
-    "t": "turquoise",
 };
 
 function closeColorMenu() {
@@ -355,7 +353,7 @@ function closeColorMenu() {
 
 function applyColor(item, color) {
     const textEl = getTextEl(item);
-    for (const c of colorChoices)
+    for (const c of COLOR_CHOICES)
         textEl.classList.remove(`bg-${c.key}`);
     if (color) {
         item.dataset.color = color;
@@ -400,7 +398,7 @@ function openColorMenu(item) {
     menuBtn.classList.add("active");
     const popover = document.createElement("div");
     popover.className = "menu-popover";
-    for (const c of colorChoices)
+    for (const c of COLOR_CHOICES)
         popover.appendChild(createSwatch(item, c));
     const clearSwatch = document.createElement("div");
     clearSwatch.className = "menu-swatch swatch-clear";
@@ -1017,12 +1015,12 @@ function setupEvents() {
                 }
                 return;
             }
-            if (colorShortcuts[key]) {
+            if (COLOR_SHORTCUTS[key]) {
                 const focused = document.activeElement;
                 if (focused && focused.classList.contains("text")) {
                     e.preventDefault();
                     const item = focused.closest(".item");
-                    const current = colorShortcuts[key];
+                    const current = COLOR_SHORTCUTS[key];
                     applyColor(item, item.dataset.color === current ? null : current);
                 }
             }

@@ -3,6 +3,7 @@
 :root {
   --color-background: #fafafa;
   --color-link: #3584e4;
+  --color-selection: #3266d0;
   --color-text: #374151;
   --font-family-monospace: Berkeley Mono, ui-monospace, monospace;
   --font-family-sans-serif: Avenir Next, system-ui, sans-serif;
@@ -29,20 +30,25 @@ body {
 
 #breadcrumb {
   margin-bottom: 1rem;
-  opacity: 0.5;
+  margin-left: 54px;
   user-select: none;
 }
 
 .breadcrumb-item {
   cursor: pointer;
+  opacity: 0.5;
 }
 
 .breadcrumb-item:hover {
-  color: var(--color-text);
+  opacity: 1;
+}
+
+.breadcrumb-sep {
+  opacity: 0.5;
 }
 
 .children {
-  padding-left: 24px;
+  padding-left: 36px;
 }
 
 .item.collapsed > .children {
@@ -69,7 +75,7 @@ body {
 .bullet {
   cursor: pointer;
   flex-shrink: 0;
-  margin-right: 6px;
+  margin-right: 12px;
   user-select: none;
 }
 
@@ -88,8 +94,8 @@ body {
 }
 
 .item.selected > .row {
-  background-color: #f5f5aa;
-  border-radius: 2px;
+  background-color: var(--color-selection);
+  color: white;
 }
 
 .zoom-hidden {
@@ -118,41 +124,18 @@ body {
   flex: 0 1 auto;
 }
 
-.text.bg-blue {
-  background-color: #dbeafe;
-}
-
-.text.bg-green {
-  background-color: #dcfce7;
-}
-
-.text.bg-orange {
-  background-color: #ffedd5;
-}
-
-.text.bg-red {
-  background-color: #fee2e2;
-}
-
-.text.bg-turquoise {
-  background-color: #ccfbf1;
-}
-
-.text.bg-violet {
-  background-color: #ede9fe;
-}
-
-.text.bg-yellow {
-  background-color: #fef9c3;
-}
+.text.bg-blue   { background-color: #c3ddfd; }
+.text.bg-green  { background-color: #bbefd9; }
+.text.bg-orange { background-color: #fbd8bc; }
+.text.bg-red    { background-color: #f7d4fa; }
+.text.bg-violet { background-color: #d8d3f9; }
+.text.bg-yellow { background-color: #f8e568; }
 
 /* Ellipsis menu */
 
 .menu-btn {
-  color: #9ca3af;
   cursor: pointer;
   flex-shrink: 0;
-  font-size: 14px;
   opacity: 0;
   user-select: none;
   width: 16px;
@@ -160,13 +143,13 @@ body {
 
 .row:hover > .menu-btn,
 .menu-btn.active {
-  opacity: 1;
+  opacity: 0.5;
 }
 
 .menu-popover {
   background: #fff;
-  border: 1px solid #e5e7eb;
   border-radius: 6px;
+  border: 1px solid #e5e7eb;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-wrap: wrap;
@@ -177,8 +160,8 @@ body {
 }
 
 .menu-swatch {
-  border: 2px solid transparent;
   border-radius: 50%;
+  border: 2px solid transparent;
   cursor: pointer;
   height: 20px;
   width: 20px;

@@ -181,3 +181,15 @@ body {
 .help-key {
   opacity: 0.5;
 }
+
+/* Mobile */
+
+@media (max-width: 600px) {
+  body {
+    padding: 1rem;
+  }
+  #help {
+    right: 1rem;
+    top: 1rem;
+  }
+}

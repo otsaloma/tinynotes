@@ -580,6 +580,14 @@ function handleEnter(e) {
         textEl.textContent = before;
         const newItem = createItem(after);
         item.parentElement.insertBefore(newItem, item.nextSibling);
+        if (cursorPos === 0) {
+            const oldChildren = getChildrenEl(item);
+            const newChildren = getChildrenEl(newItem);
+            while (oldChildren.firstChild)
+                newChildren.appendChild(oldChildren.firstChild);
+            updateToggle(item);
+            updateToggle(newItem);
+        }
         const parentItem = getParentItem(item);
         if (parentItem) updateToggle(parentItem);
         const newTextEl = getTextEl(newItem);

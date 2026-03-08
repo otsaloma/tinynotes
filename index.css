@@ -36,7 +36,7 @@ body {
 
 #breadcrumb {
   margin-bottom: 1rem;
-  margin-left: 54px;
+  margin-left: 38px;
   user-select: none;
 }
 
@@ -137,63 +137,48 @@ body {
 .text.bg-violet { background-color: var(--color-bg-violet); }
 .text.bg-yellow { background-color: var(--color-bg-yellow); }
 
-/* Ellipsis menu */
+/* Help */
 
-.menu-btn {
-  cursor: pointer;
-  flex-shrink: 0;
-  opacity: 0;
+#help {
+  position: fixed;
+  right: 4rem;
+  top: 3rem;
   user-select: none;
-  width: 16px;
 }
 
-.row:hover > .menu-btn,
-.menu-btn.active {
+#help-label {
+  cursor: default;
   opacity: 0.5;
 }
 
-.menu-popover {
-  background: #fff;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 6px 8px;
-  position: absolute;
-  z-index: 100;
+#help-label:hover {
+  opacity: 1;
 }
 
-.menu-swatch {
-  border-radius: 50%;
-  border: 2px solid transparent;
-  cursor: pointer;
-  height: 20px;
-  width: 20px;
-}
-
-.menu-swatch:hover {
-  border-color: #9ca3af;
-}
-
-.menu-swatch.swatch-clear {
-  background: #fff;
-  border: 2px solid #d1d5db;
-}
-
-.menu-divider {
-  border-top: 1px solid #e5e7eb;
-  width: 100%;
-}
-
-.menu-action {
-  color: var(--color-text);
-  cursor: pointer;
+#help-popover {
+  background: var(--color-text);
+  border-radius: 12px;
+  color: white;
+  display: none;
   font-size: var(--font-size-small);
-  width: 100%;
+  padding: 14px 18px;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  white-space: nowrap;
 }
 
-.menu-action:hover {
-  color: #111827;
+#help-label:hover + #help-popover,
+#help-popover:hover {
+  display: block;
+}
+
+.help-row {
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+}
+
+.help-key {
+  opacity: 0.5;
 }

@@ -2,7 +2,6 @@
 /* global crypto, document, localStorage, navigator, window */
 
 const BULLET = "\u2022";
-const ELLIPSIS = "\u22ef";
 const NBSP = "\u00a0";
 const TRIANGLE_DOWN = "\u25bc";
 const TRIANGLE_RIGHT = "\u25b6";
@@ -24,9 +23,6 @@ function createItem(text, color) {
     item.dataset.id = generateId();
     const row = document.createElement("div");
     row.className = "row";
-    const menuBtn = document.createElement("span");
-    menuBtn.className = "menu-btn";
-    menuBtn.textContent = ELLIPSIS;
     const toggle = document.createElement("span");
     toggle.className = "toggle";
     toggle.textContent = NBSP;
@@ -41,7 +37,6 @@ function createItem(text, color) {
         item.dataset.color = color;
         textEl.classList.add(`bg-${color}`);
     }
-    row.appendChild(menuBtn);
     row.appendChild(toggle);
     row.appendChild(bullet);
     row.appendChild(textEl);
@@ -337,13 +332,6 @@ const COLOR_SHORTCUTS = {
     "g": "green",
 };
 
-function closeColorMenu() {
-    const existing = document.querySelector(".menu-popover");
-    if (existing) existing.remove();
-    const activeBtn = document.querySelector(".menu-btn.active");
-    if (activeBtn) activeBtn.classList.remove("active");
-}
-
 function applyColor(item, color) {
     const textEl = getTextEl(item);
     for (const c of COLOR_CHOICES)
@@ -370,53 +358,6 @@ function itemToText(item, indent) {
 function copyAsText(item) {
     const text = itemToText(item, 0);
     navigator.clipboard.writeText(text);
-}
-
-function createSwatch(item, c) {
-    const swatch = document.createElement("div");
-    swatch.className = "menu-swatch";
-    swatch.style.backgroundColor = `var(--color-bg-${c})`;
-    swatch.dataset.color = c;
-    swatch.addEventListener("click", e => {
-        e.stopPropagation();
-        applyColor(item, c);
-        closeColorMenu();
-    });
-    return swatch;
-}
-
-function openColorMenu(item) {
-    closeColorMenu();
-    const menuBtn = item.querySelector(":scope > .row > .menu-btn");
-    menuBtn.classList.add("active");
-    const popover = document.createElement("div");
-    popover.className = "menu-popover";
-    for (const c of COLOR_CHOICES)
-        popover.appendChild(createSwatch(item, c));
-    const clearSwatch = document.createElement("div");
-    clearSwatch.className = "menu-swatch swatch-clear";
-    clearSwatch.addEventListener("click", e => {
-        e.stopPropagation();
-        applyColor(item, null);
-        closeColorMenu();
-    });
-    popover.appendChild(clearSwatch);
-    const divider = document.createElement("div");
-    divider.className = "menu-divider";
-    popover.appendChild(divider);
-    const copyBtn = document.createElement("div");
-    copyBtn.className = "menu-action";
-    copyBtn.textContent = "Copy as text";
-    copyBtn.addEventListener("click", e => {
-        e.stopPropagation();
-        copyAsText(item);
-        closeColorMenu();
-    });
-    popover.appendChild(copyBtn);
-    const rect = menuBtn.getBoundingClientRect();
-    popover.style.left = `${rect.left}px`;
-    popover.style.top = `${rect.bottom + 4}px`;
-    document.body.appendChild(popover);
 }
 
 // Link Rendering
@@ -960,12 +901,6 @@ function setupEvents() {
         if (selectedItems.length > 0 && !e.shiftKey) {
             clearSelection();
         }
-        if (e.target.classList.contains("menu-btn")) {
-            e.stopPropagation();
-            const item = e.target.closest(".item");
-            openColorMenu(item);
-            return;
-        }
         if (e.target.classList.contains("toggle")) {
             const item = e.target.closest(".item");
             toggleCollapse(item);
@@ -987,11 +922,6 @@ function setupEvents() {
     });
     document.addEventListener("keydown", e => {
         if (e.key === "Escape") {
-            if (document.querySelector(".menu-popover")) {
-                e.preventDefault();
-                closeColorMenu();
-                return;
-            }
             if (selectedItems.length > 0) {
                 e.preventDefault();
                 clearSelection();
@@ -1008,6 +938,14 @@ function setupEvents() {
                 }
                 return;
             }
+            if (key === "e") {
+                const focused = document.activeElement;
+                if (focused && focused.classList.contains("text")) {
+                    e.preventDefault();
+                    copyAsText(focused.closest(".item"));
+                }
+                return;
+            }
             if (COLOR_SHORTCUTS[key]) {
                 const focused = document.activeElement;
                 if (focused && focused.classList.contains("text")) {
@@ -1017,11 +955,6 @@ function setupEvents() {
                     applyColor(item, item.dataset.color === current ? null : current);
                 }
             }
-        }
-    });
-    document.addEventListener("click", e => {
-        if (!e.target.closest(".menu-popover") && !e.target.classList.contains("menu-btn")) {
-            closeColorMenu();
         }
     });
     const breadcrumb = document.getElementById("breadcrumb");
@@ -1034,7 +967,47 @@ function setupEvents() {
 
 // Main
 
+function createHelp() {
+    const shortcuts = [
+        ["Tab", "Indent"],
+        ["Shift+Tab", "Dedent"],
+        ["Shift+Backspace", "Delete"],
+        ["Shift+Arrow Up/Down", "Multi-Select"],
+        ["Alt+E", "Copy As Text"],
+        ["Alt+Y", "Background Yellow"],
+        ["Alt+O", "Background Orange"],
+        ["Alt+R", "Background Red"],
+        ["Alt+V", "Background Violet"],
+        ["Alt+B", "Background Blue"],
+        ["Alt+G", "Background Green"],
+        ["Alt+C", "Background Clear"],
+    ];
+    const help = document.createElement("div");
+    help.id = "help";
+    const label = document.createElement("span");
+    label.id = "help-label";
+    label.textContent = "Help";
+    help.appendChild(label);
+    const popover = document.createElement("div");
+    popover.id = "help-popover";
+    for (const [key, desc] of shortcuts) {
+        const row = document.createElement("div");
+        row.className = "help-row";
+        const descEl = document.createElement("span");
+        descEl.textContent = desc;
+        const keyEl = document.createElement("span");
+        keyEl.className = "help-key";
+        keyEl.textContent = key;
+        row.appendChild(descEl);
+        row.appendChild(keyEl);
+        popover.appendChild(row);
+    }
+    help.appendChild(popover);
+    document.body.appendChild(help);
+}
+
 function main() {
+    createHelp();
     const breadcrumb = document.createElement("div");
     breadcrumb.id = "breadcrumb";
     document.body.appendChild(breadcrumb);

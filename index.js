@@ -1257,11 +1257,12 @@ function createHelp() {
     const shortcuts = [
         ["Ctrl+Z", "Undo"],
         ["Ctrl+Shift+Z", "Redo"],
+        "---",
         ["Tab", "Indent"],
         ["Shift+Tab", "Dedent"],
         ["Shift+Backspace", "Delete"],
         ["Shift+Arrow Up/Down", "Multi-Select"],
-        ["Alt+E", "Copy As Text"],
+        "---",
         ["Alt+Y", "Background Yellow"],
         ["Alt+O", "Background Orange"],
         ["Alt+R", "Background Red"],
@@ -1269,6 +1270,8 @@ function createHelp() {
         ["Alt+B", "Background Blue"],
         ["Alt+G", "Background Green"],
         ["Alt+C", "Background Clear"],
+        "---",
+        ["Alt+E", "Copy As Text"],
     ];
     const help = document.createElement("div");
     help.id = "help";
@@ -1278,7 +1281,14 @@ function createHelp() {
     help.appendChild(label);
     const popover = document.createElement("div");
     popover.id = "help-popover";
-    for (const [key, desc] of shortcuts) {
+    for (const entry of shortcuts) {
+        if (entry === "---") {
+            const hr = document.createElement("hr");
+            hr.className = "help-separator";
+            popover.appendChild(hr);
+            continue;
+        }
+        const [key, desc] = entry;
         const row = document.createElement("div");
         row.className = "help-row";
         const descEl = document.createElement("span");

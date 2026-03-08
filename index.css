@@ -11,8 +11,7 @@
   --color-link: #3584e4;
   --color-selection: #3266d0;
   --color-text: #374151;
-  --font-family-monospace: Berkeley Mono, ui-monospace, monospace;
-  --font-family-sans-serif: Avenir Next, system-ui, sans-serif;
+  --font-family-monospace: Berkeley Mono, SF Mono, IBM Plex Mono, ui-monospace, monospace;
   --font-size-main: 16px;
   --font-size-small: 14px;
 }

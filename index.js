@@ -362,6 +362,28 @@ function applyColor(item, color) {
     save();
 }
 
+function toggleComplete(item) {
+    commitTextCheckpoint();
+    pushUndo();
+    const completing = !item.classList.contains("completed");
+    const items = [item, ...item.querySelectorAll(".item")];
+    for (const it of items) {
+        if (completing) {
+            it.classList.add("completed");
+            it.dataset.completed = "true";
+        } else {
+            it.classList.remove("completed");
+            delete it.dataset.completed;
+        }
+    }
+    if (completing) {
+        const nextSibling = item.nextElementSibling;
+        if (nextSibling && nextSibling.classList.contains("item"))
+            getTextEl(nextSibling).focus();
+    }
+    save();
+}
+
 function itemToText(item, indent) {
     const text = getTextEl(item).textContent;
     const prefix = "    ".repeat(indent);
@@ -472,6 +494,7 @@ function serialize(container) {
             id: item.dataset.id,
             text: getTextEl(item).textContent,
             collapsed: item.classList.contains("collapsed"),
+            completed: item.classList.contains("completed"),
             color: item.dataset.color || null,
             children: serialize(getChildrenEl(item)),
         });
@@ -485,6 +508,10 @@ function deserialize(items, container) {
         item.dataset.id = data.id;
         if (data.collapsed) {
             item.classList.add("collapsed");
+        }
+        if (data.completed) {
+            item.classList.add("completed");
+            item.dataset.completed = "true";
         }
         container.appendChild(item);
         if (data.children && data.children.length > 0) {
@@ -1045,6 +1072,26 @@ function setupEvents() {
                 handleDeleteMulti();
                 return;
             }
+            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                commitTextCheckpoint();
+                pushUndo();
+                const completing = selectedItems.some(it => !it.classList.contains("completed"));
+                for (const it of selectedItems) {
+                    const items = [it, ...it.querySelectorAll(".item")];
+                    for (const desc of items) {
+                        if (completing) {
+                            desc.classList.add("completed");
+                            desc.dataset.completed = "true";
+                        } else {
+                            desc.classList.remove("completed");
+                            delete desc.dataset.completed;
+                        }
+                    }
+                }
+                save();
+                return;
+            }
             // Modifier keys alone don't clear selection
             if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return;
             // Any other key clears selection and falls through
@@ -1052,6 +1099,12 @@ function setupEvents() {
         }
         // Single-item handlers
         if (!e.target.classList.contains("text")) return;
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            const item = e.target.closest(".item");
+            toggleComplete(item);
+            return;
+        }
         if (e.key === "Enter") {
             handleEnter(e);
         } else if (e.key === "Backspace" && e.shiftKey) {
@@ -1278,6 +1331,7 @@ function createHelp() {
         ["Tab", "Indent"],
         ["Shift+Tab", "Dedent"],
         ["Shift+Backspace", "Delete"],
+        ["Ctrl+Enter", "Complete"],
         ["Shift+Arrow Up/Down", "Multi-Select"],
         "---",
         ["Alt+Y", "Background Yellow"],

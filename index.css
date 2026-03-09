@@ -60,6 +60,11 @@ body {
   display: none;
 }
 
+.item.completed > .row > .text {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
 .row {
   align-items: baseline;
   display: flex;

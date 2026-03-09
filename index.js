@@ -1239,6 +1239,14 @@ function setupEvents() {
         if ((e.ctrlKey || e.metaKey) && !e.altKey) {
             if (e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
             if ((e.key === "z" && e.shiftKey) || e.key === "y") { e.preventDefault(); redo(); return; }
+            if (e.key === "C" && e.shiftKey) {
+                const focused = document.activeElement;
+                if (focused && focused.classList.contains("text")) {
+                    e.preventDefault();
+                    copyAsText(focused.closest(".item"));
+                }
+                return;
+            }
         }
         if (e.key === "Escape") {
             if (selectedItems.length > 0) {
@@ -1254,14 +1262,6 @@ function setupEvents() {
                 if (focused && focused.classList.contains("text")) {
                     e.preventDefault();
                     applyColor(focused.closest(".item"), null);
-                }
-                return;
-            }
-            if (key === "e") {
-                const focused = document.activeElement;
-                if (focused && focused.classList.contains("text")) {
-                    e.preventDefault();
-                    copyAsText(focused.closest(".item"));
                 }
                 return;
             }
@@ -1332,6 +1332,7 @@ function createHelp() {
         ["Shift+Tab", "Dedent"],
         ["Ctrl+Enter", "Complete"],
         ["Ctrl+Shift+Backspace", "Delete"],
+        ["Ctrl+Shift+C", "Copy As Text"],
         ["Shift+Up/Down", "Multi-Select"],
         "---",
         ["Alt+Y", "Background Yellow"],
@@ -1341,8 +1342,6 @@ function createHelp() {
         ["Alt+B", "Background Blue"],
         ["Alt+G", "Background Green"],
         ["Alt+C", "Background Clear"],
-        "---",
-        ["Alt+E", "Copy As Text"],
     ];
     const help = document.createElement("div");
     help.id = "help";

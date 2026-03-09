@@ -1107,7 +1107,7 @@ function setupEvents() {
         }
         if (e.key === "Enter") {
             handleEnter(e);
-        } else if (e.key === "Backspace" && e.shiftKey) {
+        } else if (e.key === "Backspace" && e.shiftKey && e.ctrlKey) {
             e.preventDefault();
             commitTextCheckpoint();
             pushUndo();
@@ -1330,7 +1330,7 @@ function createHelp() {
         "---",
         ["Tab", "Indent"],
         ["Shift+Tab", "Dedent"],
-        ["Shift+Backspace", "Delete"],
+        ["Ctrl+Shift+Backspace", "Delete"],
         ["Ctrl+Enter", "Complete"],
         ["Shift+Arrow Up/Down", "Multi-Select"],
         "---",

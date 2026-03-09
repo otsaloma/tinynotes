@@ -1092,6 +1092,21 @@ function setupEvents() {
                 save();
                 return;
             }
+            if (e.key === "c" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                const text = selectedItems.map(it => itemToText(it, 0)).join("");
+                navigator.clipboard.writeText(text);
+                notify("Copied");
+                return;
+            }
+            if (e.key === "x" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                const text = selectedItems.map(it => itemToText(it, 0)).join("");
+                navigator.clipboard.writeText(text);
+                notify("Cut");
+                handleDeleteMulti();
+                return;
+            }
             // Modifier keys alone don't clear selection
             if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return;
             // Any other key clears selection and falls through

@@ -1330,9 +1330,9 @@ function createHelp() {
         "---",
         ["Tab", "Indent"],
         ["Shift+Tab", "Dedent"],
-        ["Ctrl+Shift+Backspace", "Delete"],
         ["Ctrl+Enter", "Complete"],
-        ["Shift+Arrow Up/Down", "Multi-Select"],
+        ["Ctrl+Shift+Backspace", "Delete"],
+        ["Shift+Up/Down", "Multi-Select"],
         "---",
         ["Alt+Y", "Background Yellow"],
         ["Alt+O", "Background Orange"],
@@ -1366,7 +1366,12 @@ function createHelp() {
         descEl.textContent = desc;
         const keyEl = document.createElement("span");
         keyEl.className = "help-key";
-        keyEl.textContent = key;
+        const parts = key.split("+");
+        for (let i = 0; i < parts.length; i++) {
+            const kbd = document.createElement("kbd");
+            kbd.textContent = parts[i];
+            keyEl.appendChild(kbd);
+        }
         row.appendChild(descEl);
         row.appendChild(keyEl);
         popover.appendChild(row);

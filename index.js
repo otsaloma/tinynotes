@@ -773,9 +773,13 @@ function handleBackspace(e) {
             save();
             return;
         }
+        const nextTextEl = idx < visibleItems.length - 1 ? visibleItems[idx + 1] : null;
         if (prevTextEl) {
             prevTextEl.focus();
             setCursorPos(prevTextEl, prevTextEl.textContent.length);
+        } else if (nextTextEl) {
+            nextTextEl.focus();
+            setCursorPos(nextTextEl, 0);
         }
     } else if (text === "" && hasChildren(item)) {
         const parentContainer = item.parentElement;
@@ -1142,6 +1146,12 @@ function setupEvents() {
             } else if (prevTextEl) {
                 prevTextEl.focus();
                 setCursorPos(prevTextEl, prevTextEl.textContent.length);
+            } else {
+                const nextTextEl = idx < visibleItems.length - 1 ? visibleItems[idx + 1] : null;
+                if (nextTextEl) {
+                    nextTextEl.focus();
+                    setCursorPos(nextTextEl, 0);
+                }
             }
             save();
         } else if (e.key === "Backspace") {

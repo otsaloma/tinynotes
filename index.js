@@ -820,11 +820,9 @@ function handleBackspace(e) {
     save();
 }
 
-function handleTab(e) {
-    e.preventDefault();
+function indentItem(textEl) {
     commitTextCheckpoint();
     pushUndo();
-    const textEl = e.target;
     const item = textEl.closest(".item");
     const prevItem = getPrevItem(item);
     if (!prevItem) return;
@@ -842,11 +840,14 @@ function handleTab(e) {
     save();
 }
 
-function handleShiftTab(e) {
+function handleTab(e) {
     e.preventDefault();
+    indentItem(e.target);
+}
+
+function dedentItem(textEl) {
     commitTextCheckpoint();
     pushUndo();
-    const textEl = e.target;
     const item = textEl.closest(".item");
     const parentItem = getParentItem(item);
     if (!parentItem) return;
@@ -869,6 +870,39 @@ function handleShiftTab(e) {
     textEl.focus();
     setCursorPos(textEl, cursorPos);
     save();
+}
+
+function deleteItem(textEl) {
+    commitTextCheckpoint();
+    pushUndo();
+    const item = textEl.closest(".item");
+    const visibleItems = getVisibleItems();
+    const idx = visibleItems.indexOf(textEl);
+    const prevTextEl = idx > 0 ? visibleItems[idx - 1] : null;
+    const parentItem = getParentItem(item);
+    item.remove();
+    if (parentItem) updateToggle(parentItem);
+    const outline = document.getElementById("outline");
+    if (!outline.querySelector(".item")) {
+        const newItem = createItem("");
+        outline.appendChild(newItem);
+        getTextEl(newItem).focus();
+    } else if (prevTextEl) {
+        prevTextEl.focus();
+        setCursorPos(prevTextEl, prevTextEl.textContent.length);
+    } else {
+        const nextTextEl = idx < visibleItems.length - 1 ? visibleItems[idx + 1] : null;
+        if (nextTextEl) {
+            nextTextEl.focus();
+            setCursorPos(nextTextEl, 0);
+        }
+    }
+    save();
+}
+
+function handleShiftTab(e) {
+    e.preventDefault();
+    dedentItem(e.target);
 }
 
 function handleArrowUp(e) {
@@ -1128,32 +1162,7 @@ function setupEvents() {
             handleEnter(e);
         } else if (e.key === "Backspace" && e.shiftKey && e.ctrlKey) {
             e.preventDefault();
-            commitTextCheckpoint();
-            pushUndo();
-            const textEl = e.target;
-            const item = textEl.closest(".item");
-            const visibleItems = getVisibleItems();
-            const idx = visibleItems.indexOf(textEl);
-            const prevTextEl = idx > 0 ? visibleItems[idx - 1] : null;
-            const parentItem = getParentItem(item);
-            item.remove();
-            if (parentItem) updateToggle(parentItem);
-            const outline = document.getElementById("outline");
-            if (!outline.querySelector(".item")) {
-                const newItem = createItem("");
-                outline.appendChild(newItem);
-                getTextEl(newItem).focus();
-            } else if (prevTextEl) {
-                prevTextEl.focus();
-                setCursorPos(prevTextEl, prevTextEl.textContent.length);
-            } else {
-                const nextTextEl = idx < visibleItems.length - 1 ? visibleItems[idx + 1] : null;
-                if (nextTextEl) {
-                    nextTextEl.focus();
-                    setCursorPos(nextTextEl, 0);
-                }
-            }
-            save();
+            deleteItem(e.target);
         } else if (e.key === "Backspace") {
             handleBackspace(e);
         } else if (e.key === "Tab" && !e.shiftKey) {
@@ -1350,32 +1359,38 @@ function setupEvents() {
 
 function createHelp() {
     const shortcuts = [
-        ["Ctrl+Z", "Undo"],
-        ["Ctrl+Shift+Z", "Redo"],
+        ["Ctrl+Z", "Undo", () => undo()],
+        ["Ctrl+Shift+Z", "Redo", () => redo()],
         "---",
-        ["Tab", "Indent"],
-        ["Shift+Tab", "Dedent"],
-        ["Ctrl+Enter", "Complete"],
-        ["Ctrl+Shift+Backspace", "Delete"],
-        ["Ctrl+Shift+C", "Copy As Text"],
+        ["Tab", "Indent", textEl => indentItem(textEl)],
+        ["Shift+Tab", "Dedent", textEl => dedentItem(textEl)],
+        ["Ctrl+Enter", "Complete", textEl => toggleComplete(textEl.closest(".item"))],
+        ["Ctrl+Shift+Backspace", "Delete", textEl => deleteItem(textEl)],
+        ["Ctrl+Shift+C", "Copy As Text", textEl => copyAsText(textEl.closest(".item"))],
         ["Shift+Up/Down", "Multi-Select"],
         "---",
-        ["Alt+Y", "Background Yellow"],
-        ["Alt+O", "Background Orange"],
-        ["Alt+R", "Background Red"],
-        ["Alt+V", "Background Violet"],
-        ["Alt+B", "Background Blue"],
-        ["Alt+G", "Background Green"],
-        ["Alt+C", "Background Clear"],
+        ["Alt+Y", "Background Yellow", textEl => applyColor(textEl.closest(".item"), "yellow")],
+        ["Alt+O", "Background Orange", textEl => applyColor(textEl.closest(".item"), "orange")],
+        ["Alt+R", "Background Red", textEl => applyColor(textEl.closest(".item"), "red")],
+        ["Alt+V", "Background Violet", textEl => applyColor(textEl.closest(".item"), "violet")],
+        ["Alt+B", "Background Blue", textEl => applyColor(textEl.closest(".item"), "blue")],
+        ["Alt+G", "Background Green", textEl => applyColor(textEl.closest(".item"), "green")],
+        ["Alt+C", "Background Clear", textEl => applyColor(textEl.closest(".item"), null)],
     ];
     const help = document.createElement("div");
     help.id = "help";
     const label = document.createElement("span");
     label.id = "help-label";
-    label.textContent = "Help";
+    label.textContent = "Menu";
     help.appendChild(label);
+    help.addEventListener("mousedown", e => e.preventDefault());
     const popover = document.createElement("div");
     popover.id = "help-popover";
+    const dismissPopover = () => popover.classList.remove("visible");
+    label.addEventListener("click", () => popover.classList.toggle("visible"));
+    document.addEventListener("mousedown", e => {
+        if (!help.contains(e.target)) dismissPopover();
+    });
     for (const entry of shortcuts) {
         if (entry === "---") {
             const hr = document.createElement("hr");
@@ -1383,9 +1398,18 @@ function createHelp() {
             popover.appendChild(hr);
             continue;
         }
-        const [key, desc] = entry;
+        const [key, desc, action] = entry;
         const row = document.createElement("div");
         row.className = "help-row";
+        if (action) {
+            row.classList.add("help-action");
+            row.addEventListener("click", () => {
+                const active = document.activeElement;
+                if (!active || !active.classList.contains("text")) return;
+                dismissPopover();
+                action(active);
+            });
+        }
         const descEl = document.createElement("span");
         descEl.textContent = desc;
         const keyEl = document.createElement("span");

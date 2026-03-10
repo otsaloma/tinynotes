@@ -193,7 +193,7 @@ body {
 }
 
 #help-label {
-  cursor: default;
+  cursor: pointer;
   opacity: 0.5;
 }
 
@@ -214,8 +214,7 @@ body {
   white-space: nowrap;
 }
 
-#help-label:hover + #help-popover,
-#help-popover:hover {
+#help-popover.visible {
   display: block;
 }
 
@@ -224,6 +223,17 @@ body {
   gap: 24px;
   justify-content: space-between;
   margin: 3px 0;
+}
+
+.help-action {
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 0 -8px;
+  padding: 3px 8px;
+}
+
+.help-action:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .help-key {

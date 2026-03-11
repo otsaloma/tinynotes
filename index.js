@@ -694,6 +694,13 @@ function zoomTo(id) {
     commitTextCheckpoint();
     pushUndo();
     zoomedId = id === "root" ? null : id;
+    if (zoomedId) {
+        const target = getItemEl(zoomedId);
+        if (target && target.classList.contains("collapsed")) {
+            target.classList.remove("collapsed");
+            updateToggle(target);
+        }
+    }
     applyZoom();
     save();
 }

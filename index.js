@@ -1472,7 +1472,7 @@ function createHelp() {
     help.id = "help";
     const label = document.createElement("span");
     label.id = "help-label";
-    label.textContent = `${getEmail()} \u00b7 Menu`;
+    label.textContent = `${getEmail()} ${TRIANGLE_DOWN}`;
     help.appendChild(label);
     help.addEventListener("mousedown", e => e.preventDefault());
     const popover = document.createElement("div");

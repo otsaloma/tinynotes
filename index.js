@@ -1,5 +1,8 @@
 // -*- coding: utf-8-unix -*-
-/* global crypto, document, localStorage, navigator, window */
+/* global atob, crypto, document, fetch, localStorage, location, navigator, window */
+
+const COGNITO_CLIENT_ID = "30j2jbt002e8c3sh053sq6oa3i";
+const COGNITO_DOMAIN = "eu-north-1fmmzfb35t.auth.eu-north-1.amazoncognito.com";
 
 const BULLET = "\u2022";
 const NBSP = "\u00a0";
@@ -1362,6 +1365,87 @@ function setupEvents() {
     });
 }
 
+// Auth
+
+function getRedirectUri() {
+    return location.origin + location.pathname;
+}
+
+function getLoginUrl() {
+    const params = new URLSearchParams({
+        response_type: "code",
+        client_id: COGNITO_CLIENT_ID,
+        redirect_uri: getRedirectUri(),
+        scope: "openid email",
+    });
+    return `https://${COGNITO_DOMAIN}/oauth2/authorize?${params}`;
+}
+
+function getLogoutUrl() {
+    const params = new URLSearchParams({
+        client_id: COGNITO_CLIENT_ID,
+        logout_uri: getRedirectUri(),
+    });
+    return `https://${COGNITO_DOMAIN}/logout?${params}`;
+}
+
+async function handleAuthCallback() {
+    const params = new URLSearchParams(location.search);
+    const code = params.get("code");
+    if (!code) return;
+    const body = new URLSearchParams({
+        grant_type: "authorization_code",
+        client_id: COGNITO_CLIENT_ID,
+        redirect_uri: getRedirectUri(),
+        code: code,
+    });
+    const response = await fetch(`https://${COGNITO_DOMAIN}/oauth2/token`, {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: body,
+    });
+    const tokens = await response.json();
+    localStorage.setItem("tinynotes_id_token", tokens.id_token);
+    localStorage.setItem("tinynotes_access_token", tokens.access_token);
+    localStorage.setItem("tinynotes_refresh_token", tokens.refresh_token);
+    window.history.replaceState({}, document.title, location.pathname);
+}
+
+function decodeJwtPayload(token) {
+    const payload = token.split(".")[1];
+    return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+}
+
+function isAuthenticated() {
+    const token = localStorage.getItem("tinynotes_id_token");
+    if (!token) return false;
+    const payload = decodeJwtPayload(token);
+    return payload.exp * 1000 > Date.now();
+}
+
+function getEmail() {
+    const token = localStorage.getItem("tinynotes_id_token");
+    if (!token) return null;
+    return decodeJwtPayload(token).email;
+}
+
+function logout() {
+    localStorage.removeItem("tinynotes_id_token");
+    localStorage.removeItem("tinynotes_access_token");
+    localStorage.removeItem("tinynotes_refresh_token");
+    location.href = getLogoutUrl();
+}
+
+function createLoginPage() {
+    const container = document.createElement("div");
+    container.id = "login";
+    const link = document.createElement("a");
+    link.href = getLoginUrl();
+    link.textContent = "Log in";
+    container.appendChild(link);
+    document.body.appendChild(container);
+}
+
 // Main
 
 function createHelp() {
@@ -1388,7 +1472,7 @@ function createHelp() {
     help.id = "help";
     const label = document.createElement("span");
     label.id = "help-label";
-    label.textContent = "Menu";
+    label.textContent = `${getEmail()} \u00b7 Menu`;
     help.appendChild(label);
     help.addEventListener("mousedown", e => e.preventDefault());
     const popover = document.createElement("div");
@@ -1431,6 +1515,16 @@ function createHelp() {
         row.appendChild(keyEl);
         popover.appendChild(row);
     }
+    const logoutSep = document.createElement("hr");
+    logoutSep.className = "help-separator";
+    popover.appendChild(logoutSep);
+    const logoutRow = document.createElement("div");
+    logoutRow.className = "help-row help-action";
+    const logoutDesc = document.createElement("span");
+    logoutDesc.textContent = "Log out";
+    logoutRow.appendChild(logoutDesc);
+    logoutRow.addEventListener("click", () => logout());
+    popover.appendChild(logoutRow);
     help.appendChild(popover);
     document.body.appendChild(help);
 }
@@ -1461,5 +1555,11 @@ function main() {
 }
 
 (function() {
-    main();
+    handleAuthCallback().then(() => {
+        if (isAuthenticated()) {
+            main();
+        } else {
+            createLoginPage();
+        }
+    });
 })();

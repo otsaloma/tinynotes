@@ -1416,11 +1416,30 @@ function decodeJwtPayload(token) {
     return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
 }
 
-function isAuthenticated() {
+async function refreshTokens() {
+    const refreshToken = localStorage.getItem("tinynotes_refresh_token");
+    if (!refreshToken) return false;
+    const body = new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id: COGNITO_CLIENT_ID,
+        refresh_token: refreshToken,
+    });
+    const response = await fetch(`https://${COGNITO_DOMAIN}/oauth2/token`, {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: body,
+    });
+    if (!response.ok) return false;
+    const tokens = await response.json();
+    localStorage.setItem("tinynotes_id_token", tokens.id_token);
+    localStorage.setItem("tinynotes_access_token", tokens.access_token);
+    return true;
+}
+
+async function isAuthenticated() {
     const token = localStorage.getItem("tinynotes_id_token");
-    if (!token) return false;
-    const payload = decodeJwtPayload(token);
-    return payload.exp * 1000 > Date.now();
+    if (token && decodeJwtPayload(token).exp * 1000 > Date.now()) return true;
+    return await refreshTokens();
 }
 
 function getEmail() {
@@ -1556,7 +1575,7 @@ function main() {
 
 (function() {
     handleAuthCallback().then(() => {
-        if (isAuthenticated()) {
+        if (await isAuthenticated()) {
             main();
         } else {
             createLoginPage();

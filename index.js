@@ -1573,12 +1573,11 @@ function main() {
     }
 }
 
-(function() {
-    handleAuthCallback().then(() => {
-        if (await isAuthenticated()) {
-            main();
-        } else {
-            createLoginPage();
-        }
-    });
+(async function() {
+    await handleAuthCallback();
+    if (await isAuthenticated()) {
+        main();
+    } else {
+        createLoginPage();
+    }
 })();

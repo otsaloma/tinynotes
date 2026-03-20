@@ -530,11 +530,11 @@ function save() {
         zoomedId: zoomedId,
         items: serialize(outline),
     };
-    localStorage.setItem("tinynotes", JSON.stringify(data));
+    localStorage.setItem("tinynotes_notes", JSON.stringify(data));
 }
 
 function load() {
-    const raw = localStorage.getItem("tinynotes");
+    const raw = localStorage.getItem("tinynotes_notes");
     if (!raw) return null;
     return JSON.parse(raw);
 }

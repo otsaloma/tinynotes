@@ -1548,7 +1548,7 @@ function createLoginPage() {
 
 // Main
 
-function createHelp() {
+function createMenu() {
     const shortcuts = [
         ["Ctrl+Z", "Undo", () => undo()],
         ["Ctrl+Shift+Z", "Redo", () => redo()],
@@ -1568,35 +1568,35 @@ function createHelp() {
         ["Alt+G", "Background Green", textEl => applyColor(textEl.closest(".item"), "green")],
         ["Alt+C", "Background Clear", textEl => applyColor(textEl.closest(".item"), null)],
     ];
-    const help = document.createElement("div");
-    help.id = "help";
+    const menu = document.createElement("div");
+    menu.id = "menu";
     const syncStatus = document.createElement("span");
     syncStatus.id = "sync-status";
     document.body.appendChild(syncStatus);
     const label = document.createElement("span");
-    label.id = "help-label";
+    label.id = "menu-label";
     label.textContent = `${getEmail()} ${TRIANGLE_DOWN}`;
-    help.appendChild(label);
-    help.addEventListener("mousedown", e => e.preventDefault());
+    menu.appendChild(label);
+    menu.addEventListener("mousedown", e => e.preventDefault());
     const popover = document.createElement("div");
-    popover.id = "help-popover";
+    popover.id = "menu-popover";
     const dismissPopover = () => popover.classList.remove("visible");
     label.addEventListener("click", () => popover.classList.toggle("visible"));
     document.addEventListener("mousedown", e => {
-        if (!help.contains(e.target)) dismissPopover();
+        if (!menu.contains(e.target)) dismissPopover();
     });
     for (const entry of shortcuts) {
         if (entry === "---") {
             const hr = document.createElement("hr");
-            hr.className = "help-separator";
+            hr.className = "menu-separator";
             popover.appendChild(hr);
             continue;
         }
         const [key, desc, action] = entry;
         const row = document.createElement("div");
-        row.className = "help-row";
+        row.className = "menu-row";
         if (action) {
-            row.classList.add("help-action");
+            row.classList.add("menu-action");
             row.addEventListener("click", () => {
                 const active = document.activeElement;
                 if (!active || !active.classList.contains("text")) return;
@@ -1607,7 +1607,7 @@ function createHelp() {
         const descEl = document.createElement("span");
         descEl.textContent = desc;
         const keyEl = document.createElement("span");
-        keyEl.className = "help-key";
+        keyEl.className = "menu-key";
         const parts = key.split("+");
         for (let i = 0; i < parts.length; i++) {
             const kbd = document.createElement("kbd");
@@ -1619,21 +1619,21 @@ function createHelp() {
         popover.appendChild(row);
     }
     const logoutSep = document.createElement("hr");
-    logoutSep.className = "help-separator";
+    logoutSep.className = "menu-separator";
     popover.appendChild(logoutSep);
     const logoutRow = document.createElement("div");
-    logoutRow.className = "help-row help-action";
+    logoutRow.className = "menu-row menu-action";
     const logoutDesc = document.createElement("span");
     logoutDesc.textContent = "Log out";
     logoutRow.appendChild(logoutDesc);
     logoutRow.addEventListener("click", () => logout());
     popover.appendChild(logoutRow);
-    help.appendChild(popover);
-    document.body.appendChild(help);
+    menu.appendChild(popover);
+    document.body.appendChild(menu);
 }
 
 async function main() {
-    createHelp();
+    createMenu();
     const breadcrumbs = document.createElement("div");
     breadcrumbs.id = "breadcrumbs";
     document.body.appendChild(breadcrumbs);

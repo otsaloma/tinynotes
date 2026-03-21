@@ -712,14 +712,14 @@ function applyZoom() {
     const els = outline.querySelectorAll(".zoom-root, .zoom-ancestor, .zoom-hidden");
     for (const el of els)
         el.classList.remove("zoom-root", "zoom-ancestor", "zoom-hidden");
-    const breadcrumb = document.getElementById("breadcrumb");
-    breadcrumb.innerHTML = "";
+    const breadcrumbs = document.getElementById("breadcrumbs");
+    breadcrumbs.innerHTML = "";
     if (!zoomedId) {
         const home = document.createElement("span");
-        home.className = "breadcrumb-item";
+        home.className = "breadcrumb";
         home.dataset.id = "root";
         home.textContent = "Home";
-        breadcrumb.appendChild(home);
+        breadcrumbs.appendChild(home);
         return;
     }
     const target = getItemEl(zoomedId);
@@ -764,13 +764,13 @@ function applyZoom() {
             const sep = document.createElement("span");
             sep.className = "breadcrumb-sep";
             sep.innerHTML = " &gt; ";
-            breadcrumb.appendChild(sep);
+            breadcrumbs.appendChild(sep);
         }
         const span = document.createElement("span");
-        span.className = "breadcrumb-item";
+        span.className = "breadcrumb";
         span.dataset.id = crumbs[i].id;
         span.textContent = crumbs[i].text;
-        breadcrumb.appendChild(span);
+        breadcrumbs.appendChild(span);
     }
 }
 
@@ -1401,9 +1401,9 @@ function setupEvents() {
             }
         }
     });
-    const breadcrumb = document.getElementById("breadcrumb");
-    breadcrumb.addEventListener("click", e => {
-        const crumbItem = e.target.closest(".breadcrumb-item");
+    const breadcrumbs = document.getElementById("breadcrumbs");
+    breadcrumbs.addEventListener("click", e => {
+        const crumbItem = e.target.closest(".breadcrumb");
         if (!crumbItem) return;
         zoomTo(crumbItem.dataset.id);
     });
@@ -1634,9 +1634,9 @@ function createHelp() {
 
 async function main() {
     createHelp();
-    const breadcrumb = document.createElement("div");
-    breadcrumb.id = "breadcrumb";
-    document.body.appendChild(breadcrumb);
+    const breadcrumbs = document.createElement("div");
+    breadcrumbs.id = "breadcrumbs";
+    document.body.appendChild(breadcrumbs);
     const outline = document.createElement("div");
     outline.id = "outline";
     document.body.appendChild(outline);
@@ -1666,9 +1666,9 @@ async function main() {
 
 (async function() {
     if (DEMO) {
-        const breadcrumb = document.createElement("div");
-        breadcrumb.id = "breadcrumb";
-        document.body.appendChild(breadcrumb);
+        const breadcrumbs = document.createElement("div");
+        breadcrumbs.id = "breadcrumbs";
+        document.body.appendChild(breadcrumbs);
         const outline = document.createElement("div");
         outline.id = "outline";
         document.body.appendChild(outline);
@@ -1685,8 +1685,8 @@ async function main() {
     document.body.appendChild(spinner);
     await handleAuthCallback();
     if (await isAuthenticated()) {
-        spinner.remove();
         await main();
+        spinner.remove();
     } else {
         spinner.remove();
         createLoginPage();

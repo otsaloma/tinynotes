@@ -11,7 +11,9 @@
   --color-link: #3584e4;
   --color-selection: #3266d0;
   --color-text: #374151;
+  --color-text-error: #a51d2d;
   --font-family-monospace: Berkeley Mono, SF Mono, IBM Plex Mono, ui-monospace, monospace;
+  --font-family-sans-serif: Avenir Next, system-ui, sans-serif;
   --font-size-main: 15px;
   --font-size-small: 13px;
   --font-size-tiny: 11px;
@@ -34,18 +36,24 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-#breadcrumb {
+@media (max-width: 600px) {
+  body {
+    padding: 1rem;
+  }
+}
+
+#breadcrumbs {
   margin-bottom: 1rem;
-  margin-left: 38px;
+  margin-left: 37px;
   user-select: none;
 }
 
-.breadcrumb-item {
+.breadcrumb {
   cursor: pointer;
   opacity: 0.5;
 }
 
-.breadcrumb-item:hover {
+.breadcrumb:hover {
   opacity: 1;
 }
 
@@ -154,20 +162,17 @@ body {
   display: none;
 }
 
-/* Background colors */
-
+/* Color only the extent of text. */
 .text[class*="bg-"] {
   flex: 0 1 auto;
 }
 
-.text.bg-blue   { background-color: var(--color-bg-blue); }
-.text.bg-green  { background-color: var(--color-bg-green); }
+.text.bg-blue   { background-color: var(--color-bg-blue);   }
+.text.bg-green  { background-color: var(--color-bg-green);  }
 .text.bg-orange { background-color: var(--color-bg-orange); }
-.text.bg-red    { background-color: var(--color-bg-red); }
+.text.bg-red    { background-color: var(--color-bg-red);    }
 .text.bg-violet { background-color: var(--color-bg-violet); }
 .text.bg-yellow { background-color: var(--color-bg-yellow); }
-
-/* Toast */
 
 #toast {
   background-color: var(--color-text);
@@ -183,8 +188,6 @@ body {
   z-index: 1000;
 }
 
-/* Help */
-
 #help {
   position: fixed;
   right: 4rem;
@@ -192,21 +195,16 @@ body {
   user-select: none;
 }
 
+@media (max-width: 600px) {
+  #help {
+    right: 1rem;
+    top: 1rem;
+  }
+}
+
 #help-label {
   cursor: pointer;
   opacity: 0.5;
-}
-
-#sync-status {
-  bottom: 3rem;
-  opacity: 0.5;
-  position: fixed;
-  right: 4rem;
-}
-
-#sync-status.sync-error {
-  background-color: var(--color-bg-red);
-  opacity: 1;
 }
 
 #help-label:hover {
@@ -240,8 +238,8 @@ body {
 .help-action {
   border-radius: 6px;
   cursor: pointer;
-  margin: 0 -8px;
-  padding: 3px 8px;
+  margin: 0 -6px;
+  padding: 3px 6px;
 }
 
 .help-action:hover {
@@ -255,7 +253,7 @@ body {
 .help-key kbd {
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 4px;
+  border-radius: 3px;
   display: inline-block;
   font-size: var(--font-size-tiny);
   line-height: 1;
@@ -270,11 +268,28 @@ body {
 .help-separator {
   border: none;
   border-top: 1px solid white;
-  margin: 4px 0;
+  margin: 6px 0;
   opacity: 0.2;
 }
 
-/* Login */
+#sync-status {
+  bottom: 3rem;
+  opacity: 0.5;
+  position: fixed;
+  right: 4rem;
+}
+
+@media (max-width: 600px) {
+  #sync-status {
+    bottom: 1rem;
+    right: 1rem;
+  }
+}
+
+#sync-status.sync-error {
+  color: var(--color-text-error);
+  opacity: 1;
+}
 
 #login {
   align-items: center;
@@ -294,22 +309,9 @@ body {
   font-size: 48px;
   font-weight: 600;
   padding: 0.25em 1em;
-  text-decoration-color: var(--color-link);
   text-decoration: none;
 }
 
 #login a:hover {
   background-color: rgb(from var(--color-link) r g b / 0.9);
-}
-
-/* Mobile */
-
-@media (max-width: 600px) {
-  body {
-    padding: 1rem;
-  }
-  #help {
-    right: 1rem;
-    top: 1rem;
-  }
 }

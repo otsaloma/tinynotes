@@ -546,17 +546,17 @@ function updateSyncStatus(state) {
     if (!el) return;
     el.classList.remove("sync-error");
     if (state === "syncing") {
-        el.textContent = "Syncing...";
+        el.textContent = "syncing...";
     } else if (state === "synced") {
-        el.textContent = "Synced";
+        el.textContent = "synced";
         setTimeout(() => {
-            if (el.textContent === "Synced") el.textContent = "";
+            if (el.textContent === "synced") el.textContent = "";
         }, 3000);
     } else if (state === "error") {
-        el.textContent = "Sync error";
+        el.textContent = "sync error";
         el.classList.add("sync-error");
     } else if (state === "conflict") {
-        el.textContent = "Sync conflict";
+        el.textContent = "sync conflict";
         el.classList.add("sync-error");
     }
 }
@@ -1567,7 +1567,7 @@ function createHelp() {
     help.id = "help";
     const syncStatus = document.createElement("span");
     syncStatus.id = "sync-status";
-    help.appendChild(syncStatus);
+    document.body.appendChild(syncStatus);
     const label = document.createElement("span");
     label.id = "help-label";
     label.textContent = `${getEmail()} ${TRIANGLE_DOWN}`;

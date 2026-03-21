@@ -198,13 +198,14 @@ body {
 }
 
 #sync-status {
-  font-size: var(--font-size-tiny);
-  margin-right: 8px;
+  bottom: 3rem;
   opacity: 0.5;
+  position: fixed;
+  right: 4rem;
 }
 
 #sync-status.sync-error {
-  color: var(--color-bg-red);
+  background-color: var(--color-bg-red);
   opacity: 1;
 }
 

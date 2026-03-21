@@ -536,6 +536,7 @@ function save() {
         items: serialize(outline),
     };
     localStorage.setItem("tinynotes_notes", JSON.stringify(data));
+    updateSyncStatus("pending");
     debouncedSync();
 }
 
@@ -552,6 +553,8 @@ function updateSyncStatus(state) {
         setTimeout(() => {
             if (el.textContent === "synced") el.textContent = "";
         }, 3000);
+    } else if (state === "pending") {
+        el.textContent = "sync pending";
     } else if (state === "error") {
         el.textContent = "sync error";
         el.classList.add("sync-error");

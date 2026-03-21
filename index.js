@@ -1660,10 +1660,16 @@ async function main() {
 }
 
 (async function() {
+    const spinner = document.createElement("div");
+    spinner.id = "login";
+    spinner.innerHTML = '<div class="spinner"><div class="double-bounce1"></div><div class="double-bounce2"></div></div>';
+    document.body.appendChild(spinner);
     await handleAuthCallback();
     if (await isAuthenticated()) {
+        spinner.remove();
         await main();
     } else {
+        spinner.remove();
         createLoginPage();
     }
 })();

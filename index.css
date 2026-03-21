@@ -197,6 +197,17 @@ body {
   opacity: 0.5;
 }
 
+#sync-status {
+  font-size: var(--font-size-tiny);
+  margin-right: 8px;
+  opacity: 0.5;
+}
+
+#sync-status.sync-error {
+  color: var(--color-bg-red);
+  opacity: 1;
+}
+
 #help-label:hover {
   opacity: 1;
 }

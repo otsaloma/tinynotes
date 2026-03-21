@@ -3,6 +3,8 @@
 
 const COGNITO_CLIENT_ID = "30j2jbt002e8c3sh053sq6oa3i";
 const COGNITO_DOMAIN = "eu-north-1fmmzfb35t.auth.eu-north-1.amazoncognito.com";
+const API_URL = "https://q3yno9wuoi.execute-api.eu-north-1.amazonaws.com";
+const SYNC_DEBOUNCE_MS = 2000;
 
 const BULLET = "\u2022";
 const NBSP = "\u00a0";
@@ -22,6 +24,9 @@ let redoStack = [];
 let focusEntryState = null;
 let focusEntryText = null;
 let focusEntryItemId = null;
+
+let syncTimeout = null;
+let currentVersion = null;
 
 // DOM Helpers
 
@@ -531,12 +536,83 @@ function save() {
         items: serialize(outline),
     };
     localStorage.setItem("tinynotes_notes", JSON.stringify(data));
+    debouncedSync();
 }
 
-function load() {
-    const raw = localStorage.getItem("tinynotes_notes");
-    if (!raw) return null;
-    return JSON.parse(raw);
+// Sync
+
+function updateSyncStatus(state) {
+    const el = document.getElementById("sync-status");
+    if (!el) return;
+    el.classList.remove("sync-error");
+    if (state === "syncing") {
+        el.textContent = "Syncing...";
+    } else if (state === "synced") {
+        el.textContent = "Synced";
+        setTimeout(() => {
+            if (el.textContent === "Synced") el.textContent = "";
+        }, 3000);
+    } else if (state === "error") {
+        el.textContent = "Sync error";
+        el.classList.add("sync-error");
+    } else if (state === "conflict") {
+        el.textContent = "Sync conflict";
+        el.classList.add("sync-error");
+    }
+}
+
+async function syncToRemote(retry) {
+    const token = localStorage.getItem("tinynotes_id_token");
+    if (!token) return;
+    const outline = document.getElementById("outline");
+    const items = serialize(outline);
+    updateSyncStatus("syncing");
+    const response = await fetch(`${API_URL}/notes`, {
+        method: "POST",
+        headers: {"Authorization": `Bearer ${token}`},
+        body: JSON.stringify({items: items, version: currentVersion}),
+    });
+    if (response.ok) {
+        const data = await response.json();
+        currentVersion = data.version;
+        localStorage.setItem("tinynotes_notes", JSON.stringify({
+            zoomedId: zoomedId,
+            items: items,
+        }));
+        updateSyncStatus("synced");
+    } else if (response.status === 409) {
+        updateSyncStatus("conflict");
+    } else if (response.status === 401 && !retry) {
+        const refreshed = await refreshTokens();
+        if (refreshed) await syncToRemote(true);
+        else updateSyncStatus("error");
+    } else {
+        updateSyncStatus("error");
+    }
+}
+
+function debouncedSync() {
+    if (syncTimeout) clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(() => syncToRemote(), SYNC_DEBOUNCE_MS);
+}
+
+async function fetchFromRemote(retry) {
+    const token = localStorage.getItem("tinynotes_id_token");
+    if (!token) return null;
+    const response = await fetch(`${API_URL}/notes`, {
+        method: "GET",
+        headers: {"Authorization": `Bearer ${token}`},
+    });
+    if (response.ok) {
+        const data = await response.json();
+        currentVersion = data.version;
+        return data;
+    }
+    if (response.status === 401 && !retry) {
+        const refreshed = await refreshTokens();
+        if (refreshed) return await fetchFromRemote(true);
+    }
+    return null;
 }
 
 // Undo/Redo
@@ -1489,6 +1565,9 @@ function createHelp() {
     ];
     const help = document.createElement("div");
     help.id = "help";
+    const syncStatus = document.createElement("span");
+    syncStatus.id = "sync-status";
+    help.appendChild(syncStatus);
     const label = document.createElement("span");
     label.id = "help-label";
     label.textContent = `${getEmail()} ${TRIANGLE_DOWN}`;
@@ -1548,7 +1627,7 @@ function createHelp() {
     document.body.appendChild(help);
 }
 
-function main() {
+async function main() {
     createHelp();
     const breadcrumb = document.createElement("div");
     breadcrumb.id = "breadcrumb";
@@ -1556,14 +1635,21 @@ function main() {
     const outline = document.createElement("div");
     outline.id = "outline";
     document.body.appendChild(outline);
-    const data = load();
-    if (data && data.items && data.items.length > 0) {
-        deserialize(data.items, outline);
-        zoomedId = data.zoomedId || null;
+    const remote = await fetchFromRemote();
+    if (!remote) {
+        updateSyncStatus("error");
+        return;
+    }
+    if (remote.items && remote.items.length > 0) {
+        deserialize(remote.items, outline);
     } else {
         const item = createItem("");
         outline.appendChild(item);
     }
+    localStorage.setItem("tinynotes_notes", JSON.stringify({
+        zoomedId: null,
+        items: remote.items,
+    }));
     applyZoom();
     renderAllLinks();
     setupEvents();
@@ -1576,7 +1662,7 @@ function main() {
 (async function() {
     await handleAuthCallback();
     if (await isAuthenticated()) {
-        main();
+        await main();
     } else {
         createLoginPage();
     }

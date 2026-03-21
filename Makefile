@@ -26,7 +26,7 @@ dist-lambda: check clean
 	cat requirements.txt \
 	| grep -v boto3 \
 	| grep -v flake8 \
-	> requirements-lambda.txt
+	> requirements-lambda.txt || true
 	pip3 install \
 	--platform $(LAMBDA_PLATFORM) \
 	--target lambda \

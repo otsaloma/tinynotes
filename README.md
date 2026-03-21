@@ -14,10 +14,25 @@ be very cost efficient and shouldn't cost you more than $1/mo to host.
 
 TODO
 
+* ?demo=1
+
 ## Deployment
 
 TODO
 
+* AWS S3
+* AWS Lambda
+* AWS Cognito
+* AWS API Gateway
+* make deploy-html
+* make deploy-lambda
+
 ## Sync
 
 TODO
+
+* get
+* post
+* S3
+* Backups
+* Versioning

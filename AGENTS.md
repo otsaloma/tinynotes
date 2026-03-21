@@ -7,6 +7,13 @@ entirely client-side JavaScript, files `index.css`, `index.html` and
 `index.js`. Sync is provided to AWS S3 via a custom Lambda function,
 file `db.py`. Tiny Notes is essentially a simplified Workflowy clone.
 
+## Demo Mode
+
+Tiny Notes has a demo-mode with URL parameter "demo=1". In demo-mode,
+Tiny Notes should never contact the sync server and never save anything
+to local storage. Make sure demo-mode remains detached and
+non-persistent in all future code changes.
+
 ## General
 
 * Always run `make check` after your changes

@@ -5,6 +5,7 @@ const COGNITO_CLIENT_ID = "30j2jbt002e8c3sh053sq6oa3i";
 const COGNITO_DOMAIN = "eu-north-1fmmzfb35t.auth.eu-north-1.amazoncognito.com";
 const API_URL = "https://q3yno9wuoi.execute-api.eu-north-1.amazonaws.com";
 const SYNC_DEBOUNCE_MS = 2000;
+const DEMO = new URLSearchParams(location.search).has("demo");
 
 const BULLET = "\u2022";
 const NBSP = "\u00a0";
@@ -530,6 +531,7 @@ function deserialize(items, container) {
 }
 
 function save() {
+    if (DEMO) return;
     const outline = document.getElementById("outline");
     const data = {
         zoomedId: zoomedId,
@@ -1663,6 +1665,20 @@ async function main() {
 }
 
 (async function() {
+    if (DEMO) {
+        const breadcrumb = document.createElement("div");
+        breadcrumb.id = "breadcrumb";
+        document.body.appendChild(breadcrumb);
+        const outline = document.createElement("div");
+        outline.id = "outline";
+        document.body.appendChild(outline);
+        const item = createItem("");
+        outline.appendChild(item);
+        applyZoom();
+        setupEvents();
+        getTextEl(item).focus();
+        return;
+    }
     const spinner = document.createElement("div");
     spinner.id = "login";
     spinner.innerHTML = '<div class="spinner"><div class="double-bounce1"></div><div class="double-bounce2"></div></div>';

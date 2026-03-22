@@ -1524,12 +1524,17 @@ async function isAuthenticated() {
 }
 
 function getEmail() {
+    if (DEMO) return `demo@${location.hostname}`;
     const token = localStorage.getItem("tinynotes_id_token");
     if (!token) return null;
     return decodeJwtPayload(token).email;
 }
 
 function logout() {
+    if (DEMO) {
+        location.href = location.origin + location.pathname;
+        return;
+    }
     localStorage.removeItem("tinynotes_id_token");
     localStorage.removeItem("tinynotes_access_token");
     localStorage.removeItem("tinynotes_refresh_token");
@@ -1666,6 +1671,7 @@ async function main() {
 
 (async function() {
     if (DEMO) {
+        createMenu();
         const breadcrumbs = document.createElement("div");
         breadcrumbs.id = "breadcrumbs";
         document.body.appendChild(breadcrumbs);

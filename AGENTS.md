@@ -53,4 +53,4 @@ non-persistent in all future code changes.
 
 * Follow PEP8
 * Use variable name `x` in list comprehensions
-* USe variable name `x` in single-argument lambda functions
+* Use variable name `x` in single-argument lambda functions

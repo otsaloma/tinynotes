@@ -1250,7 +1250,7 @@ function setupEvents() {
         }
         if (e.key === "Enter") {
             handleEnter(e);
-        } else if (e.key === "Backspace" && e.shiftKey && e.ctrlKey) {
+        } else if (e.key === "Backspace" && e.shiftKey && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
             deleteItem(e.target);
         } else if (e.key === "Backspace") {

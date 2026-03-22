@@ -1,7 +1,7 @@
 # -*- coding: utf-8-unix -*-
 
-PYTHON = python$(PYTHON_VERSION)
 PYTHON_VERSION = 3.13
+PYTHON = python$(PYTHON_VERSION)
 VERSION = `date +%s`
 
 HTML_S3_TARGET = s3://otsaloma.io/notes

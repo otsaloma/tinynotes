@@ -8,6 +8,10 @@ ALLOWED_USERS = os.environ["ALLOWED_USERS"].split(":")
 BUCKET = os.environ["BUCKET"]
 s3 = boto3.client("s3")
 
+for user in ALLOWED_USERS:
+    if "@" not in user or " " in user:
+        raise ValueError("Bad ALLOWED_USERS")
+
 def get_notes(email):
     try:
         response = s3.get_object(Bucket=BUCKET, Key=f"{email}/notes.json")
@@ -104,3 +108,20 @@ if __name__ == "__main__":
         },
     }, {})
     assert value["statusCode"] == 403
+
+    # GET
+    value = lambda_handler({
+        "requestContext": {
+            "authorizer": {
+                "jwt": {
+                    "claims": {
+                        "email": ALLOWED_USERS[0],
+                    },
+                },
+            },
+            "http": {
+                "method": "GET",
+            },
+        },
+    }, {})
+    assert value["statusCode"] == 200

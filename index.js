@@ -4,7 +4,7 @@
 const COGNITO_CLIENT_ID = "30j2jbt002e8c3sh053sq6oa3i";
 const COGNITO_DOMAIN = "eu-north-1fmmzfb35t.auth.eu-north-1.amazoncognito.com";
 const API_URL = "https://q3yno9wuoi.execute-api.eu-north-1.amazonaws.com";
-const SYNC_DEBOUNCE_MS = 2000;
+const SYNC_DEBOUNCE_MS = 3000;
 const DEMO = new URLSearchParams(location.search).has("demo");
 
 const BULLET = "\u2022";

@@ -1553,24 +1553,27 @@ function createLoginPage() {
 // Main
 
 function createMenu() {
+    const isMac = navigator.platform.startsWith("Mac");
+    const ctrl = isMac ? "Cmd" : "Ctrl";
+    const alt = isMac ? "Opt" : "Alt";
     const shortcuts = [
-        ["Ctrl+Z", "Undo", () => undo()],
-        ["Ctrl+Shift+Z", "Redo", () => redo()],
+        [`${ctrl}+Z`, "Undo", () => undo()],
+        [`${ctrl}+Shift+Z`, "Redo", () => redo()],
         "---",
         ["Tab", "Indent", textEl => indentItem(textEl)],
         ["Shift+Tab", "Dedent", textEl => dedentItem(textEl)],
-        ["Ctrl+Enter", "Complete", textEl => toggleComplete(textEl.closest(".item"))],
-        ["Ctrl+Shift+Backspace", "Delete", textEl => deleteItem(textEl)],
-        ["Ctrl+Shift+C", "Copy As Text", textEl => copyAsText(textEl.closest(".item"))],
+        [`${ctrl}+Enter`, "Complete", textEl => toggleComplete(textEl.closest(".item"))],
+        [`${ctrl}+Shift+Backspace`, "Delete", textEl => deleteItem(textEl)],
+        [`${ctrl}+Shift+C`, "Copy As Text", textEl => copyAsText(textEl.closest(".item"))],
         ["Shift+Up/Down", "Multi-Select"],
         "---",
-        ["Alt+Y", "Background Yellow", textEl => applyColor(textEl.closest(".item"), "yellow")],
-        ["Alt+O", "Background Orange", textEl => applyColor(textEl.closest(".item"), "orange")],
-        ["Alt+R", "Background Red", textEl => applyColor(textEl.closest(".item"), "red")],
-        ["Alt+V", "Background Violet", textEl => applyColor(textEl.closest(".item"), "violet")],
-        ["Alt+B", "Background Blue", textEl => applyColor(textEl.closest(".item"), "blue")],
-        ["Alt+G", "Background Green", textEl => applyColor(textEl.closest(".item"), "green")],
-        ["Alt+C", "Background Clear", textEl => applyColor(textEl.closest(".item"), null)],
+        [`${alt}+Y`, "Background Yellow", textEl => applyColor(textEl.closest(".item"), "yellow")],
+        [`${alt}+O`, "Background Orange", textEl => applyColor(textEl.closest(".item"), "orange")],
+        [`${alt}+R`, "Background Red", textEl => applyColor(textEl.closest(".item"), "red")],
+        [`${alt}+V`, "Background Violet", textEl => applyColor(textEl.closest(".item"), "violet")],
+        [`${alt}+B`, "Background Blue", textEl => applyColor(textEl.closest(".item"), "blue")],
+        [`${alt}+G`, "Background Green", textEl => applyColor(textEl.closest(".item"), "green")],
+        [`${alt}+C`, "Background Clear", textEl => applyColor(textEl.closest(".item"), null)],
     ];
     const menu = document.createElement("div");
     menu.id = "menu";

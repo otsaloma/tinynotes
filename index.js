@@ -1,33 +1,32 @@
 // -*- coding: utf-8-unix -*-
 /* global atob, crypto, document, fetch, localStorage, location, navigator, window */
 
+const API_URL = "https://q3yno9wuoi.execute-api.eu-north-1.amazonaws.com";
 const COGNITO_CLIENT_ID = "30j2jbt002e8c3sh053sq6oa3i";
 const COGNITO_DOMAIN = "eu-north-1fmmzfb35t.auth.eu-north-1.amazoncognito.com";
-const API_URL = "https://q3yno9wuoi.execute-api.eu-north-1.amazonaws.com";
-const SYNC_DEBOUNCE_MS = 3000;
 const DEMO = new URLSearchParams(location.search).has("demo");
+
+const SYNC_DEBOUNCE_MS = 3000;
+const UNDO_LIMIT = 100;
 
 const BULLET = "\u2022";
 const NBSP = "\u00a0";
 const TRIANGLE_DOWN = "\u25bc";
 const TRIANGLE_RIGHT = "\u25b6";
 
-let dragState = null;
+let currentVersion = null;
 let dragDidDrop = false;
+let dragState = null;
+let focusEntryItemId = null;
+let focusEntryState = null;
+let focusEntryText = null;
+let redoStack = [];
 let selectedItems = [];
 let selectionAnchor = null;
 let suppressSelectionClear = false;
-let zoomedId = null;
-
-const UNDO_LIMIT = 100;
-let undoStack = [];
-let redoStack = [];
-let focusEntryState = null;
-let focusEntryText = null;
-let focusEntryItemId = null;
-
 let syncTimeout = null;
-let currentVersion = null;
+let undoStack = [];
+let zoomedId = null;
 
 // DOM Helpers
 

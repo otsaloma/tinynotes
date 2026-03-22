@@ -1,13 +1,13 @@
 # -*- coding: utf-8-unix -*-
 
-PYTHON_VERSION = 3.13
-PYTHON = python$(PYTHON_VERSION)
-VERSION = `date +%s`
+PYTHON_VERSION := 3.13
+PYTHON := python$(PYTHON_VERSION)
+VERSION := `date +%s`
 
-HTML_S3_TARGET = s3://otsaloma.io/notes
-LAMBDA_NAME = tinynotes-db
-LAMBDA_PLATFORM = manylinux2014_x86_64
-LAMBDA_REGION = eu-north-1
+HTML_S3_TARGET := s3://otsaloma.io/notes
+LAMBDA_NAME := tinynotes-db
+LAMBDA_PLATFORM := manylinux2014_x86_64
+LAMBDA_REGION := eu-north-1
 
 check:
 	flake8 *.py

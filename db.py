@@ -71,8 +71,7 @@ def lambda_handler(event, context):
         body = json.dumps(data)
         return response(200, body)
     if method == "POST":
-        body = event.get("body", "{}")
-        data = json.loads(body)
+        data = json.loads(event["body"])
         new_version = put_notes(email, data)
         if new_version is None:
             return response(409, "Trying to put data based on an obsolete version")

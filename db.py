@@ -15,9 +15,7 @@ for user in ALLOWED_USERS:
 def get_notes(email):
     try:
         response = s3.get_object(Bucket=BUCKET, Key=f"{email}/notes.json")
-        data = json.loads(response["Body"].read())
-        prune_backups(email)
-        return data
+        return json.loads(response["Body"].read())
     except s3.exceptions.NoSuchKey:
         # First call for a new user with no notes yet.
         return {"items": [], "version": 0}
@@ -40,6 +38,8 @@ def put_notes(email, data):
     body = json.dumps(data)
     s3.put_object(Bucket=BUCKET, Key=f"{email}/notes.json", Body=body)
     s3.put_object(Bucket=BUCKET, Key=f"{email}/bak/{new_version}.json", Body=body)
+    if new_version % 100 == 0:
+        prune_backups(email)
     return new_version
 
 def prune_backups(email, keep=100):

@@ -1334,6 +1334,14 @@ function setupEvents() {
         if (e.target.classList.contains("toggle")) {
             const item = e.target.closest(".item");
             toggleCollapse(item);
+        } else if (e.target.classList.contains("row")) {
+            const textEl = e.target.querySelector(".text");
+            if (textEl) {
+                textEl.focus();
+                const sel = window.getSelection();
+                sel.selectAllChildren(textEl);
+                sel.collapseToEnd();
+            }
         } else if (e.target.classList.contains("bullet")) {
             if (dragDidDrop) {
                 dragDidDrop = false;

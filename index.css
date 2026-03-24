@@ -80,6 +80,10 @@ body {
   padding: 2px 0;
 }
 
+.row:has(> .text[class*="bg-"]) {
+  cursor: text;
+}
+
 .toggle {
   bottom: -2px;
   cursor: pointer;

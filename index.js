@@ -4,6 +4,7 @@
 const API_URL = "https://q3yno9wuoi.execute-api.eu-north-1.amazonaws.com";
 const COGNITO_CLIENT_ID = "30j2jbt002e8c3sh053sq6oa3i";
 const COGNITO_DOMAIN = "eu-north-1fmmzfb35t.auth.eu-north-1.amazoncognito.com";
+const ACCOUNT = new URLSearchParams(location.search).get("u") || "1";
 const DEMO = new URLSearchParams(location.search).has("demo");
 
 const SYNC_DEBOUNCE_MS = 3000;
@@ -536,7 +537,7 @@ function save() {
         zoomedId: zoomedId,
         items: serialize(outline),
     };
-    localStorage.setItem("tinynotes_notes", JSON.stringify(data));
+    localStorage.setItem(storageKey("notes"), JSON.stringify(data));
     updateSyncStatus("pending");
     debouncedSync();
 }
@@ -566,7 +567,7 @@ function updateSyncStatus(state) {
 }
 
 async function syncToRemote(retry) {
-    const token = localStorage.getItem("tinynotes_id_token");
+    const token = localStorage.getItem(storageKey("id_token"));
     if (!token) return;
     const outline = document.getElementById("outline");
     const items = serialize(outline);
@@ -579,7 +580,7 @@ async function syncToRemote(retry) {
     if (response.ok) {
         const data = await response.json();
         currentVersion = data.version;
-        localStorage.setItem("tinynotes_notes", JSON.stringify({
+        localStorage.setItem(storageKey("notes"), JSON.stringify({
             zoomedId: zoomedId,
             items: items,
         }));
@@ -601,7 +602,7 @@ function debouncedSync() {
 }
 
 async function fetchFromRemote(retry) {
-    const token = localStorage.getItem("tinynotes_id_token");
+    const token = localStorage.getItem(storageKey("id_token"));
     if (!token) return null;
     const response = await fetch(`${API_URL}/notes`, {
         method: "GET",
@@ -1453,6 +1454,21 @@ function setupEvents() {
     });
 }
 
+// Storage
+
+function storageKey(name) {
+    return `tinynotes_u${ACCOUNT}_${name}`;
+}
+
+// TODO: Remove migrateStorageKeys after all devices have been migrated
+function migrateStorageKeys() {
+    if (!localStorage.getItem("tinynotes_id_token")) return;
+    for (const name of ["id_token", "access_token", "refresh_token", "notes"])
+        localStorage.setItem(storageKey(name), localStorage.getItem(`tinynotes_${name}`));
+    for (const name of ["id_token", "access_token", "refresh_token", "notes"])
+        localStorage.removeItem(`tinynotes_${name}`);
+}
+
 // Auth
 
 function getRedirectUri() {
@@ -1465,6 +1481,7 @@ function getLoginUrl() {
         client_id: COGNITO_CLIENT_ID,
         redirect_uri: getRedirectUri(),
         scope: "openid email",
+        state: ACCOUNT,
     });
     return `https://${COGNITO_DOMAIN}/oauth2/authorize?${params}`;
 }
@@ -1481,6 +1498,7 @@ async function handleAuthCallback() {
     const params = new URLSearchParams(location.search);
     const code = params.get("code");
     if (!code) return;
+    const account = params.get("state") || "1";
     const body = new URLSearchParams({
         grant_type: "authorization_code",
         client_id: COGNITO_CLIENT_ID,
@@ -1493,10 +1511,12 @@ async function handleAuthCallback() {
         body: body,
     });
     const tokens = await response.json();
-    localStorage.setItem("tinynotes_id_token", tokens.id_token);
-    localStorage.setItem("tinynotes_access_token", tokens.access_token);
-    localStorage.setItem("tinynotes_refresh_token", tokens.refresh_token);
-    window.history.replaceState({}, document.title, location.pathname);
+    const key = name => `tinynotes_u${account}_${name}`;
+    localStorage.setItem(key("id_token"), tokens.id_token);
+    localStorage.setItem(key("access_token"), tokens.access_token);
+    localStorage.setItem(key("refresh_token"), tokens.refresh_token);
+    const redirect = account === "1" ? location.pathname : `${location.pathname}?u=${account}`;
+    window.history.replaceState({}, document.title, redirect);
 }
 
 function decodeJwtPayload(token) {
@@ -1505,7 +1525,7 @@ function decodeJwtPayload(token) {
 }
 
 async function refreshTokens() {
-    const refreshToken = localStorage.getItem("tinynotes_refresh_token");
+    const refreshToken = localStorage.getItem(storageKey("refresh_token"));
     if (!refreshToken) return false;
     const body = new URLSearchParams({
         grant_type: "refresh_token",
@@ -1519,20 +1539,20 @@ async function refreshTokens() {
     });
     if (!response.ok) return false;
     const tokens = await response.json();
-    localStorage.setItem("tinynotes_id_token", tokens.id_token);
-    localStorage.setItem("tinynotes_access_token", tokens.access_token);
+    localStorage.setItem(storageKey("id_token"), tokens.id_token);
+    localStorage.setItem(storageKey("access_token"), tokens.access_token);
     return true;
 }
 
 async function isAuthenticated() {
-    const token = localStorage.getItem("tinynotes_id_token");
+    const token = localStorage.getItem(storageKey("id_token"));
     if (token && decodeJwtPayload(token).exp * 1000 > Date.now()) return true;
     return await refreshTokens();
 }
 
 function getEmail() {
     if (DEMO) return `demo@${location.hostname}`;
-    const token = localStorage.getItem("tinynotes_id_token");
+    const token = localStorage.getItem(storageKey("id_token"));
     if (!token) return null;
     return decodeJwtPayload(token).email;
 }
@@ -1542,9 +1562,9 @@ function logout() {
         location.href = location.origin + location.pathname;
         return;
     }
-    localStorage.removeItem("tinynotes_id_token");
-    localStorage.removeItem("tinynotes_access_token");
-    localStorage.removeItem("tinynotes_refresh_token");
+    localStorage.removeItem(storageKey("id_token"));
+    localStorage.removeItem(storageKey("access_token"));
+    localStorage.removeItem(storageKey("refresh_token"));
     location.href = getLogoutUrl();
 }
 
@@ -1666,7 +1686,7 @@ async function main() {
         const item = createItem("");
         outline.appendChild(item);
     }
-    localStorage.setItem("tinynotes_notes", JSON.stringify({
+    localStorage.setItem(storageKey("notes"), JSON.stringify({
         zoomedId: null,
         items: remote.items,
     }));
@@ -1699,6 +1719,7 @@ async function main() {
     spinner.id = "login";
     spinner.innerHTML = '<div class="spinner"><div class="double-bounce1"></div><div class="double-bounce2"></div></div>';
     document.body.appendChild(spinner);
+    if (ACCOUNT === "1") migrateStorageKeys();
     await handleAuthCallback();
     if (await isAuthenticated()) {
         await main();

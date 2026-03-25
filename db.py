@@ -20,23 +20,32 @@ def get_notes(email):
         # First call for a new user with no notes yet.
         return {"items": [], "version": 0}
 
-def put_notes(email, data):
+def get_current_version(email):
     try:
-        response = s3.get_object(Bucket=BUCKET, Key=f"{email}/notes.json")
-        current = json.loads(response["Body"].read())
-        current_version = current["version"]
+        key = f"{email}/notes.json"
+        response = s3.head_object(Bucket=BUCKET, Key=key)
+        metadata = response.get("Metadata", {})
+        if version := metadata.get("version"):
+            return int(version)
+        # Object exists but has no version metadata yet.
+        response = s3.get_object(Bucket=BUCKET, Key=key)
+        data = json.loads(response["Body"].read())
+        return data["version"]
     except s3.exceptions.NoSuchKey:
         # First call for a new user with no notes yet.
-        current_version = 0
+        return 0
+
+def put_notes(email, data):
     # Only allow put for new data that is based on the current version.
     # In case of concurrent use, one device might have started a session
     # based on an earlier version.
+    current_version = get_current_version(email)
     if data["version"] != current_version:
         return None
     new_version = current_version + 1
     data["version"] = new_version
     body = json.dumps(data)
-    s3.put_object(Bucket=BUCKET, Key=f"{email}/notes.json", Body=body)
+    s3.put_object(Bucket=BUCKET, Key=f"{email}/notes.json", Body=body, Metadata={"version": str(new_version)})
     s3.put_object(Bucket=BUCKET, Key=f"{email}/bak/{new_version}.json", Body=body)
     if new_version % 100 == 0:
         prune_backups(email)

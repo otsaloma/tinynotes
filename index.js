@@ -572,26 +572,30 @@ async function syncToRemote(retry) {
     const outline = document.getElementById("outline");
     const items = serialize(outline);
     updateSyncStatus("syncing");
-    const response = await fetch(`${API_URL}/notes`, {
-        method: "POST",
-        headers: {"Authorization": `Bearer ${token}`},
-        body: JSON.stringify({items: items, version: currentVersion}),
-    });
-    if (response.ok) {
-        const data = await response.json();
-        currentVersion = data.version;
-        localStorage.setItem(storageKey("notes"), JSON.stringify({
-            zoomedId: zoomedId,
-            items: items,
-        }));
-        updateSyncStatus("synced");
-    } else if (response.status === 409) {
-        updateSyncStatus("conflict");
-    } else if (response.status === 401 && !retry) {
-        const refreshed = await refreshTokens();
-        if (refreshed) await syncToRemote(true);
-        else updateSyncStatus("error");
-    } else {
+    try {
+        const response = await fetch(`${API_URL}/notes`, {
+            method: "POST",
+            headers: {"Authorization": `Bearer ${token}`},
+            body: JSON.stringify({items: items, version: currentVersion}),
+        });
+        if (response.ok) {
+            const data = await response.json();
+            currentVersion = data.version;
+            localStorage.setItem(storageKey("notes"), JSON.stringify({
+                zoomedId: zoomedId,
+                items: items,
+            }));
+            updateSyncStatus("synced");
+        } else if (response.status === 409) {
+            updateSyncStatus("conflict");
+        } else if (response.status === 401 && !retry) {
+            const refreshed = await refreshTokens();
+            if (refreshed) await syncToRemote(true);
+            else updateSyncStatus("error");
+        } else {
+            updateSyncStatus("error");
+        }
+    } catch {
         updateSyncStatus("error");
     }
 }
@@ -604,20 +608,24 @@ function debouncedSync() {
 async function fetchFromRemote(retry) {
     const token = localStorage.getItem(storageKey("id_token"));
     if (!token) return null;
-    const response = await fetch(`${API_URL}/notes`, {
-        method: "GET",
-        headers: {"Authorization": `Bearer ${token}`},
-    });
-    if (response.ok) {
-        const data = await response.json();
-        currentVersion = data.version;
-        return data;
+    try {
+        const response = await fetch(`${API_URL}/notes`, {
+            method: "GET",
+            headers: {"Authorization": `Bearer ${token}`},
+        });
+        if (response.ok) {
+            const data = await response.json();
+            currentVersion = data.version;
+            return data;
+        }
+        if (response.status === 401 && !retry) {
+            const refreshed = await refreshTokens();
+            if (refreshed) return await fetchFromRemote(true);
+        }
+        return null;
+    } catch {
+        return null;
     }
-    if (response.status === 401 && !retry) {
-        const refreshed = await refreshTokens();
-        if (refreshed) return await fetchFromRemote(true);
-    }
-    return null;
 }
 
 // Undo/Redo

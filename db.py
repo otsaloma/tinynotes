@@ -4,6 +4,8 @@ import boto3
 import json
 import os
 
+from concurrent.futures import ThreadPoolExecutor
+
 ALLOWED_USERS = os.environ["ALLOWED_USERS"].split(":")
 BUCKET = os.environ["BUCKET"]
 s3 = boto3.client("s3")
@@ -45,8 +47,11 @@ def put_notes(email, data):
     new_version = current_version + 1
     data["version"] = new_version
     body = json.dumps(data)
-    s3.put_object(Bucket=BUCKET, Key=f"{email}/notes.json", Body=body, Metadata={"version": str(new_version)})
-    s3.put_object(Bucket=BUCKET, Key=f"{email}/bak/{new_version}.json", Body=body)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        f1 = pool.submit(s3.put_object, Bucket=BUCKET, Key=f"{email}/notes.json", Body=body, Metadata={"version": str(new_version)})
+        f2 = pool.submit(s3.put_object, Bucket=BUCKET, Key=f"{email}/bak/{new_version}.json", Body=body)
+        f1.result()
+        f2.result()
     if new_version % 100 == 0:
         prune_backups(email)
     return new_version

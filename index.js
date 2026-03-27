@@ -1085,12 +1085,12 @@ function handlePaste(e) {
         const item = textEl.closest(".item");
         const itemAtLevel = [item];
         let lastItem = item;
+        const parent = item.parentElement;
+        const ref = item.nextSibling;
         for (let i = 1; i < parsed.length; i++) {
             const { level, text: lineText } = parsed[i];
             const newItem = createItem(lineText);
             if (level === 0) {
-                const parent = item.parentElement;
-                const ref = item.nextSibling;
                 parent.insertBefore(newItem, ref);
             } else {
                 const parentItem = itemAtLevel[level - 1];

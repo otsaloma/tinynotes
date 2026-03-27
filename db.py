@@ -40,7 +40,10 @@ def get_current_version(email):
 def put_notes(email, data):
     # Only allow put for new data that is based on the current version.
     # In case of concurrent use, one device might have started a session
-    # based on an earlier version.
+    # based on an earlier version. Note that the version check below is
+    # not atomic! If two requests come in at less than about 100 ms
+    # apart, the later one will win. This should not be a practical
+    # issue given a SINGLE user with multiple devices.
     current_version = get_current_version(email)
     if data["version"] != current_version:
         return None

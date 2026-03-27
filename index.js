@@ -522,14 +522,16 @@ function serialize(container) {
     const items = container.querySelectorAll(":scope > .item");
     const result = [];
     for (const item of items) {
-        result.push({
+        const data = {
             id: item.dataset.id,
             text: getTextEl(item).textContent,
-            collapsed: item.classList.contains("collapsed"),
-            completed: item.classList.contains("completed"),
-            color: item.dataset.color || null,
-            children: serialize(getChildrenEl(item)),
-        });
+        };
+        if (item.classList.contains("collapsed")) data.collapsed = true;
+        if (item.classList.contains("completed")) data.completed = true;
+        if (item.dataset.color) data.color = item.dataset.color;
+        const children = serialize(getChildrenEl(item));
+        if (children.length > 0) data.children = children;
+        result.push(data);
     }
     return result;
 }

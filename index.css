@@ -169,6 +169,7 @@ body {
 /* Color only the extent of text. */
 .text[class*="bg-"] {
   flex: 0 1 auto;
+  min-width: 1em;
 }
 
 .text.bg-blue   { background-color: var(--color-bg-blue);   }

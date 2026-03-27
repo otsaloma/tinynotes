@@ -393,6 +393,29 @@ function toggleComplete(item) {
     save();
 }
 
+function copyItemProperties(from, to) {
+    if (from.dataset.color) {
+        to.dataset.color = from.dataset.color;
+        getTextEl(to).classList.add(`bg-${from.dataset.color}`);
+    }
+    if (from.classList.contains("completed")) {
+        to.classList.add("completed");
+        to.dataset.completed = "true";
+    }
+    if (from.classList.contains("collapsed"))
+        to.classList.add("collapsed");
+}
+
+function clearItemProperties(item) {
+    if (item.dataset.color) {
+        getTextEl(item).classList.remove(`bg-${item.dataset.color}`);
+        delete item.dataset.color;
+    }
+    item.classList.remove("completed");
+    delete item.dataset.completed;
+    item.classList.remove("collapsed");
+}
+
 function itemToText(item, indent) {
     const text = getTextEl(item).textContent;
     const prefix = "    ".repeat(indent);
@@ -826,8 +849,10 @@ function handleEnter(e) {
         const after = text.substring(cursorPos);
         textEl.textContent = before;
         const newItem = createItem(after);
+        copyItemProperties(item, newItem);
         item.parentElement.insertBefore(newItem, item.nextSibling);
         if (cursorPos === 0) {
+            clearItemProperties(item);
             const oldChildren = getChildrenEl(item);
             const newChildren = getChildrenEl(newItem);
             while (oldChildren.firstChild)
@@ -841,6 +866,30 @@ function handleEnter(e) {
         newTextEl.focus();
         setCursorPos(newTextEl, 0);
     }
+    save();
+}
+
+function handleDelete(e) {
+    const textEl = e.target;
+    const item = textEl.closest(".item");
+    const text = textEl.textContent;
+    const cursorPos = getCursorPos(textEl);
+    if (cursorPos !== text.length) return;
+    const sel = window.getSelection();
+    if (!sel.isCollapsed) return;
+    if (text !== "" || hasChildren(item)) return;
+    const visibleItems = getVisibleItems();
+    const idx = visibleItems.indexOf(textEl);
+    const nextTextEl = idx < visibleItems.length - 1 ? visibleItems[idx + 1] : null;
+    if (!nextTextEl) return;
+    e.preventDefault();
+    commitTextCheckpoint();
+    pushUndo();
+    const parentItem = getParentItem(item);
+    item.remove();
+    if (parentItem) updateToggle(parentItem);
+    nextTextEl.focus();
+    setCursorPos(nextTextEl, 0);
     save();
 }
 
@@ -1264,6 +1313,8 @@ function setupEvents() {
             deleteItem(e.target);
         } else if (e.key === "Backspace") {
             handleBackspace(e);
+        } else if (e.key === "Delete") {
+            handleDelete(e);
         } else if (e.key === "Tab" && !e.shiftKey) {
             handleTab(e);
         } else if (e.key === "Tab" && e.shiftKey) {

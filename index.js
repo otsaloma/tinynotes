@@ -429,7 +429,7 @@ function itemToText(item, indent) {
 function copyAsText(item) {
     const text = itemToText(item, 0);
     navigator.clipboard.writeText(text);
-    notify("Copied");
+    notify("Copied 1 bullet");
 }
 
 let notifyTimeout;
@@ -1280,18 +1280,19 @@ function setupEvents() {
                 save();
                 return;
             }
-            if (e.key === "c" && (e.ctrlKey || e.metaKey)) {
+            // Match both Ctrl+C and Ctrl+Shift+C (copy as text)
+            if ((e.key === "c" || e.key === "C") && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 const text = selectedItems.map(it => itemToText(it, 0)).join("");
                 navigator.clipboard.writeText(text);
-                notify("Copied");
+                notify(`Copied ${selectedItems.length} bullets`);
                 return;
             }
             if (e.key === "x" && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 const text = selectedItems.map(it => itemToText(it, 0)).join("");
                 navigator.clipboard.writeText(text);
-                notify("Cut");
+                notify(`Cut ${selectedItems.length} bullets`);
                 handleDeleteMulti();
                 return;
             }
@@ -1434,10 +1435,15 @@ function setupEvents() {
             if (e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
             if ((e.key === "z" && e.shiftKey) || e.key === "y") { e.preventDefault(); redo(); return; }
             if (e.key === "C" && e.shiftKey) {
-                const focused = document.activeElement;
-                if (focused && focused.classList.contains("text")) {
-                    e.preventDefault();
-                    copyAsText(focused.closest(".item"));
+                e.preventDefault();
+                if (selectedItems.length > 0) {
+                    const text = selectedItems.map(it => itemToText(it, 0)).join("");
+                    navigator.clipboard.writeText(text);
+                    notify(`Copied ${selectedItems.length} bullets`);
+                } else {
+                    const focused = document.activeElement;
+                    if (focused && focused.classList.contains("text"))
+                        copyAsText(focused.closest(".item"));
                 }
                 return;
             }
@@ -1653,7 +1659,15 @@ function createMenu() {
         ["Shift+Tab", "Dedent", textEl => dedentItem(textEl)],
         [`${ctrl}+Enter`, "Complete", textEl => toggleComplete(textEl.closest(".item"))],
         [`${ctrl}+Shift+Backspace`, "Delete", textEl => deleteItem(textEl)],
-        [`${ctrl}+Shift+C`, "Copy As Text", textEl => copyAsText(textEl.closest(".item"))],
+        [`${ctrl}+Shift+C`, "Copy As Text", textEl => {
+            if (selectedItems.length > 0) {
+                const text = selectedItems.map(it => itemToText(it, 0)).join("");
+                navigator.clipboard.writeText(text);
+                notify(`Copied ${selectedItems.length} bullets`);
+            } else {
+                copyAsText(textEl.closest(".item"));
+            }
+        }],
         ["Shift+Up/Down", "Multi-Select"],
         "---",
         [`${alt}+Y`, "Background Yellow", textEl => applyColor(textEl.closest(".item"), "yellow")],

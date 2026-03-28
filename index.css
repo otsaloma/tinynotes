@@ -95,7 +95,7 @@ body {
 }
 
 .bullet {
-  cursor: grab;
+  cursor: pointer;
   flex-shrink: 0;
   font-weight: 900;
   margin-right: 12px;

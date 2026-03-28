@@ -1493,6 +1493,7 @@ function setupEvents() {
             if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
             dragState.isDragging = true;
             dragState.item.classList.add("dragging");
+            document.body.style.cursor = "grabbing";
             document.body.style.userSelect = "none";
         }
         const target = findDropTarget(e.clientY);
@@ -1507,6 +1508,7 @@ function setupEvents() {
         if (dragState.isDragging) {
             e.preventDefault();
             dragState.item.classList.remove("dragging");
+            document.body.style.cursor = "";
             document.body.style.userSelect = "";
             hideDropIndicator(dragIndicator);
             const target = findDropTarget(e.clientY);

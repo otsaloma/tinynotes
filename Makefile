@@ -6,7 +6,7 @@ VERSION := `date +%s`
 
 HTML_S3_TARGET := s3://otsaloma.io/notes
 LAMBDA_NAME := tinynotes-db
-LAMBDA_PLATFORM := manylinux2014_x86_64
+LAMBDA_PLATFORM := manylinux2014_aarch64
 LAMBDA_REGION := eu-north-1
 
 check:

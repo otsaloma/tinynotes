@@ -16,7 +16,8 @@ non-persistent in all future code changes.
 
 ## General
 
-* Always run `make check` after your changes
+* Always run `direnv exec . make check` after your changes
+* Always run `direnv exec . make test` after editing `db.py`
 * Don't worry about catching errors (as we have no real users)
 * Don't worry about data migrations (as we have no real users)
 

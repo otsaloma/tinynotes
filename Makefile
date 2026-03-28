@@ -26,6 +26,7 @@ dist-lambda: check clean
 	cat requirements.txt \
 	| grep -v boto3 \
 	| grep -v flake8 \
+	| grep -v pytest \
 	| grep -v requests \
 	> requirements-lambda.txt || true
 	pip3 install \
@@ -71,6 +72,9 @@ deploy-html: dist-html
 run:
 	$(PYTHON) -m http.server
 
+test:
+	pytest test_db.py
+
 venv:
 	rm -rf venv
 	$(PYTHON) -m venv venv
@@ -78,4 +82,4 @@ venv:
 	pip install -U pip setuptools wheel && \
 	pip install -r requirements.txt
 
-.PHONY: check clean dist-lambda deploy-lambda dist-html deploy-html run venv
+.PHONY: check clean dist-lambda deploy-lambda dist-html deploy-html run test venv

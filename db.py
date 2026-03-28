@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import boto3
 import json
@@ -37,6 +37,18 @@ def get_current_version(email):
         # First call for a new user with no notes yet.
         return 0
 
+def prune_backups(email, keep=100):
+    prefix = f"{email}/bak/"
+    response = s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix)
+    objects = response.get("Contents", [])
+    if len(objects) <= keep: return
+    # Sort by version: 1.json, 2.json, 3.json, ...
+    objects.sort(key=lambda x: int(x["Key"].split("/")[-1].split(".")[0]))
+    oldest = objects[:len(objects)-keep]
+    s3.delete_objects(Bucket=BUCKET, Delete={
+        "Objects": [{"Key": x["Key"]} for x in oldest]
+    })
+
 def put_notes(email, data):
     # Only allow put for new data that is based on the current version.
     # In case of concurrent use, one device might have started a session
@@ -58,18 +70,6 @@ def put_notes(email, data):
     if new_version % 100 == 0:
         prune_backups(email)
     return new_version
-
-def prune_backups(email, keep=100):
-    prefix = f"{email}/bak/"
-    response = s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix)
-    objects = response.get("Contents", [])
-    if len(objects) <= keep: return
-    # Sort by version: 1.json, 2.json, 3.json, ...
-    objects.sort(key=lambda x: int(x["Key"].split("/")[-1].split(".")[0]))
-    oldest = objects[:len(objects)-keep]
-    s3.delete_objects(Bucket=BUCKET, Delete={
-        "Objects": [{"Key": x["Key"]} for x in oldest]
-    })
 
 def response(status_code, body):
     return {"statusCode": status_code, "body": body}
@@ -95,49 +95,3 @@ def lambda_handler(event, context):
         return response(200, json.dumps({"version": new_version}))
     # We should not reach this given method limits in API Gateway.
     return response(405, "Method not allowed")
-
-if __name__ == "__main__":
-
-    # OPTIONS
-    value = lambda_handler({
-        "requestContext": {
-            "http": {
-                "method": "OPTIONS",
-            },
-        },
-    }, {})
-    assert value["statusCode"] == 200
-
-    # ALLOWED_USERS
-    value = lambda_handler({
-        "requestContext": {
-            "authorizer": {
-                "jwt": {
-                    "claims": {
-                        "email": "xxx@yyy.zzz",
-                    },
-                },
-            },
-            "http": {
-                "method": "GET",
-            },
-        },
-    }, {})
-    assert value["statusCode"] == 403
-
-    # GET
-    value = lambda_handler({
-        "requestContext": {
-            "authorizer": {
-                "jwt": {
-                    "claims": {
-                        "email": ALLOWED_USERS[0],
-                    },
-                },
-            },
-            "http": {
-                "method": "GET",
-            },
-        },
-    }, {})
-    assert value["statusCode"] == 200

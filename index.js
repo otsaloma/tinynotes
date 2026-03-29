@@ -21,6 +21,7 @@ let dragState = null;
 let focusEntryItemId = null;
 let focusEntryState = null;
 let focusEntryText = null;
+let focusedItem = null;
 let redoStack = [];
 let selectedItems = [];
 let selectionAnchor = null;
@@ -76,6 +77,14 @@ function getTextEl(item) {
 
 function getChildrenEl(item) {
     return item.querySelector(":scope > .children");
+}
+
+function setFocusedItem(item) {
+    if (focusedItem)
+        focusedItem.classList.remove("focused");
+    focusedItem = item;
+    if (focusedItem)
+        focusedItem.classList.add("focused");
 }
 
 function hasChildren(item) {
@@ -712,6 +721,7 @@ function restoreState(state) {
     const outline = document.getElementById("outline");
     outline.innerHTML = "";
     deserialize(state.items, outline);
+    setFocusedItem(null);
     zoomedId = state.zoomedId || null;
     applyZoom();
     renderAllLinks();
@@ -725,6 +735,7 @@ function restoreState(state) {
             const textEl = getTextEl(item);
             stripLinks(textEl);
             textEl.focus();
+            setFocusedItem(item);
             setCursorPos(textEl, state.cursorPos);
             focusEntryState = captureState();
             focusEntryText = textEl.textContent;
@@ -1363,12 +1374,17 @@ function setupEvents() {
             clearSelection();
         }
         stripLinks(e.target);
-        focusEntryItemId = e.target.closest(".item").dataset.id;
+        const item = e.target.closest(".item");
+        setFocusedItem(item);
+        focusEntryItemId = item.dataset.id;
         focusEntryText = e.target.textContent;
         focusEntryState = captureState();
     });
     outline.addEventListener("focusout", e => {
         if (!e.target.classList.contains("text")) return;
+        const nextTarget = e.relatedTarget;
+        if (!nextTarget || !outline.contains(nextTarget))
+            setFocusedItem(null);
         commitTextCheckpoint();
         renderLinks(e.target);
     });

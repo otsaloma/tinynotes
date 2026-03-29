@@ -44,7 +44,7 @@ body {
 
 #breadcrumbs {
   margin-bottom: 1rem;
-  margin-left: 37px;
+  margin-left: 48px;
   user-select: none;
 }
 
@@ -95,11 +95,20 @@ body {
 }
 
 .bullet {
+  border-radius: 999px;
   cursor: pointer;
   flex-shrink: 0;
   font-weight: 900;
-  margin-right: 12px;
+  height: 1lh;
+  line-height: 1lh;
+  margin-right: 6px;
+  text-align: center;
   user-select: none;
+  width: 1lh;
+}
+
+.item.focused > .row > .bullet {
+  background-color: rgb(from var(--color-text) r g b / 0.1);
 }
 
 .item.dragging {

@@ -25,6 +25,7 @@ let redoStack = [];
 let selectedItems = [];
 let selectionAnchor = null;
 let suppressSelectionClear = false;
+let hasUnsyncedChanges = false;
 let syncTimeout = null;
 let undoStack = [];
 let zoomedId = null;
@@ -563,6 +564,7 @@ function save() {
         items: serialize(outline),
     };
     localStorage.setItem(storageKey("notes"), JSON.stringify(data));
+    hasUnsyncedChanges = true;
     updateSyncStatus("pending");
     debouncedSync();
 }
@@ -593,7 +595,10 @@ function updateSyncStatus(state) {
 
 async function syncToRemote(retry) {
     const token = localStorage.getItem(storageKey("id_token"));
-    if (!token) return;
+    if (!token) {
+        hasUnsyncedChanges = false;
+        return;
+    }
     const outline = document.getElementById("outline");
     const items = serialize(outline);
     updateSyncStatus("syncing");
@@ -610,6 +615,7 @@ async function syncToRemote(retry) {
                 zoomedId: zoomedId,
                 items: items,
             }));
+            hasUnsyncedChanges = false;
             updateSyncStatus("synced");
         } else if (response.status === 409) {
             updateSyncStatus("conflict");
@@ -629,6 +635,10 @@ function debouncedSync() {
     if (syncTimeout) clearTimeout(syncTimeout);
     syncTimeout = setTimeout(() => syncToRemote(), SYNC_DEBOUNCE_MS);
 }
+
+window.addEventListener("beforeunload", e => {
+    if (hasUnsyncedChanges) e.preventDefault();
+});
 
 async function fetchFromRemote(retry) {
     const token = localStorage.getItem(storageKey("id_token"));

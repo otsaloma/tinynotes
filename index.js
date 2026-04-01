@@ -1425,7 +1425,7 @@ function setupEvents() {
             toggleCollapse(item);
         } else if (e.target.classList.contains("row")) {
             const textEl = e.target.querySelector(".text");
-            if (textEl) {
+            if (textEl && window.getSelection().isCollapsed) {
                 textEl.focus();
                 const sel = window.getSelection();
                 sel.selectAllChildren(textEl);

@@ -1079,24 +1079,26 @@ function handleShiftTab(e) {
 function handleArrowUp(e) {
     e.preventDefault();
     const textEl = e.target;
+    const cursorPos = getCursorPos(textEl);
     const visibleItems = getVisibleItems();
     const idx = visibleItems.indexOf(textEl);
     if (idx > 0) {
         const prevTextEl = visibleItems[idx - 1];
         prevTextEl.focus();
-        setCursorPos(prevTextEl, prevTextEl.textContent.length);
+        setCursorPos(prevTextEl, Math.min(cursorPos, prevTextEl.textContent.length));
     }
 }
 
 function handleArrowDown(e) {
     e.preventDefault();
     const textEl = e.target;
+    const cursorPos = getCursorPos(textEl);
     const visibleItems = getVisibleItems();
     const idx = visibleItems.indexOf(textEl);
     if (idx < visibleItems.length - 1) {
         const nextTextEl = visibleItems[idx + 1];
         nextTextEl.focus();
-        setCursorPos(nextTextEl, nextTextEl.textContent.length);
+        setCursorPos(nextTextEl, Math.min(cursorPos, nextTextEl.textContent.length));
     }
 }
 

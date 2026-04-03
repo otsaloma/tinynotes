@@ -1,5 +1,5 @@
 // -*- coding: utf-8-unix -*-
-/* global atob, crypto, document, fetch, localStorage, location, navigator, window */
+/* global atob, crypto, document, fetch, localStorage, location, navigator, Node, window */
 
 const API_URL = "https://q3yno9wuoi.execute-api.eu-north-1.amazonaws.com";
 const COGNITO_CLIENT_ID = "30j2jbt002e8c3sh053sq6oa3i";
@@ -721,7 +721,6 @@ function restoreState(state) {
     const outline = document.getElementById("outline");
     outline.innerHTML = "";
     deserialize(state.items, outline);
-    setFocusedItem(null);
     zoomedId = state.zoomedId || null;
     applyZoom();
     renderAllLinks();
@@ -735,7 +734,6 @@ function restoreState(state) {
             const textEl = getTextEl(item);
             stripLinks(textEl);
             textEl.focus();
-            setFocusedItem(item);
             setCursorPos(textEl, state.cursorPos);
             focusEntryState = captureState();
             focusEntryText = textEl.textContent;
@@ -1377,7 +1375,6 @@ function setupEvents() {
         }
         stripLinks(e.target);
         const item = e.target.closest(".item");
-        setFocusedItem(item);
         focusEntryItemId = item.dataset.id;
         focusEntryText = e.target.textContent;
         focusEntryState = captureState();
@@ -1389,6 +1386,18 @@ function setupEvents() {
             setFocusedItem(null);
         commitTextCheckpoint();
         renderLinks(e.target);
+    });
+    document.addEventListener("selectionchange", () => {
+        const sel = document.getSelection();
+        if (sel.anchorNode) {
+            const el = sel.anchorNode.nodeType === Node.TEXT_NODE ? sel.anchorNode.parentElement : sel.anchorNode;
+            const textEl = el && el.closest ? el.closest(".text") : null;
+            if (textEl && outline.contains(textEl)) {
+                setFocusedItem(textEl.closest(".item"));
+                return;
+            }
+        }
+        setFocusedItem(null);
     });
     outline.addEventListener("click", e => {
         // Shift+Click range selection

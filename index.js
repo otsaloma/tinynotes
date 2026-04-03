@@ -22,6 +22,7 @@ let focusEntryItemId = null;
 let focusEntryState = null;
 let focusEntryText = null;
 let focusedItem = null;
+let isTouchDevice = navigator.maxTouchPoints > 0;
 let redoStack = [];
 let selectedItems = [];
 let selectionAnchor = null;
@@ -1799,9 +1800,8 @@ async function main() {
     renderAllLinks();
     setupEvents();
     const visibleItems = getVisibleItems();
-    if (visibleItems.length > 0) {
+    if (visibleItems.length > 0 && !isTouchDevice)
         visibleItems[0].focus();
-    }
 }
 
 (async function() {

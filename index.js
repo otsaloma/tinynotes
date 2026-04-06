@@ -34,8 +34,26 @@ let zoomedId = null;
 
 // DOM Helpers
 
-function generateId() {
-    return crypto.randomUUID();
+function listAllIds() {
+    return Array.from(document.querySelectorAll(".item[data-id]")).map(el => el.dataset.id);
+}
+
+function generateId(length=6) {
+    const id = crypto.randomUUID().replaceAll("-", "").slice(0, length);
+    if (listAllIds().includes(id))
+        return generateId(length + 1);
+    return id;
+}
+
+// TODO: Remove once all ids migrated.
+function migrateIds(items) {
+    for (const item of items) {
+        if (item.id && item.id.length === 36)
+            item.id = generateId();
+        if (item.children)
+            migrateIds(item.children);
+    }
+    return items;
 }
 
 function createItem(text, color) {
@@ -1787,6 +1805,7 @@ async function main() {
         return;
     }
     if (remote.items && remote.items.length > 0) {
+        remote.items = migrateIds(remote.items);
         deserialize(remote.items, outline);
     } else {
         const item = createItem("");

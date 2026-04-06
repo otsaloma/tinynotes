@@ -859,6 +859,11 @@ function zoomTo(id) {
         }
     }
     applyZoom();
+    if (zoomedId) {
+        location.hash = zoomedId;
+    } else {
+        window.history.replaceState(null, "", location.pathname + location.search);
+    }
     save();
 }
 
@@ -1568,6 +1573,12 @@ function setupEvents() {
         }
         dragState = null;
     });
+    window.addEventListener("hashchange", () => {
+        const hash = location.hash.slice(1);
+        const id = hash || "root";
+        if ((id === "root" && !zoomedId) || id === zoomedId) return;
+        zoomTo(id);
+    });
 }
 
 // Storage
@@ -1815,6 +1826,8 @@ async function main() {
         zoomedId: null,
         items: remote.items,
     }));
+    const hash = location.hash.slice(1);
+    if (hash && getItemEl(hash)) zoomedId = hash;
     applyZoom();
     renderAllLinks();
     setupEvents();

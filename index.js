@@ -12,8 +12,8 @@ const UNDO_LIMIT = 100;
 
 const BULLET = "\u2022";
 const NBSP = "\u00a0";
-const TRIANGLE_DOWN = "\u25bc";
-const TRIANGLE_RIGHT = "\u25b6";
+const TRIANGLE_DOWN = "⋮";
+const TRIANGLE_RIGHT = "⋯";
 
 let currentVersion = null;
 let dragDidDrop = false;

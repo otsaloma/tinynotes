@@ -45,17 +45,6 @@ function generateId(length=6) {
     return id;
 }
 
-// TODO: Remove once all ids migrated.
-function migrateIds(items) {
-    for (const item of items) {
-        if (item.id && item.id.length === 36)
-            item.id = generateId();
-        if (item.children)
-            migrateIds(item.children);
-    }
-    return items;
-}
-
 function createItem(text, color) {
     const item = document.createElement("div");
     item.className = "item";
@@ -1591,15 +1580,6 @@ function storageKey(name) {
     return `tinynotes_u${ACCOUNT}_${name}`;
 }
 
-// TODO: Remove migrateStorageKeys after all devices have been migrated
-function migrateStorageKeys() {
-    if (!localStorage.getItem("tinynotes_id_token")) return;
-    for (const name of ["id_token", "access_token", "refresh_token", "notes"])
-        localStorage.setItem(storageKey(name), localStorage.getItem(`tinynotes_${name}`));
-    for (const name of ["id_token", "access_token", "refresh_token", "notes"])
-        localStorage.removeItem(`tinynotes_${name}`);
-}
-
 // Auth
 
 function getRedirectUri() {
@@ -1823,7 +1803,6 @@ async function main() {
         return;
     }
     if (remote.items && remote.items.length > 0) {
-        remote.items = migrateIds(remote.items);
         deserialize(remote.items, outline);
     } else {
         const item = createItem("");
@@ -1866,7 +1845,6 @@ async function main() {
     spinner.id = "login";
     spinner.innerHTML = '<div class="spinner"><div class="double-bounce1"></div><div class="double-bounce2"></div></div>';
     document.body.appendChild(spinner);
-    if (ACCOUNT === "1") migrateStorageKeys();
     await handleAuthCallback();
     if (await isAuthenticated()) {
         await main();

@@ -1720,7 +1720,7 @@ function createMenu() {
     document.body.appendChild(syncStatus);
     const label = document.createElement("span");
     label.id = "menu-label";
-    label.textContent = `${getEmail()} ${TRIANGLE_DOWN}`;
+    label.textContent = `${getEmail()} ▼`;
     menu.appendChild(label);
     menu.addEventListener("mousedown", e => e.preventDefault());
     const popover = document.createElement("div");

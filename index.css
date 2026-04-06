@@ -155,6 +155,18 @@ body {
   color: white;
 }
 
+#zoom-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  line-height: 1;
+  margin-bottom: 1rem;
+  margin-left: 48px;
+}
+
+#zoom-title:empty {
+  display: none;
+}
+
 .zoom-hidden {
   display: none;
 }

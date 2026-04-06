@@ -786,7 +786,9 @@ function applyZoom() {
     for (const el of els)
         el.classList.remove("zoom-root", "zoom-ancestor", "zoom-hidden");
     const breadcrumbs = document.getElementById("breadcrumbs");
+    const zoomTitle = document.getElementById("zoom-title");
     breadcrumbs.innerHTML = "";
+    zoomTitle.textContent = "";
     if (!zoomedId) {
         const home = document.createElement("span");
         home.className = "breadcrumb";
@@ -821,9 +823,9 @@ function applyZoom() {
         }
         ancestor = getParentItem(ancestor);
     }
-    // Build breadcrumb
-    let crumbs = [{ id: "root", text: "Home" }];
-    let node = target;
+    // Build breadcrumb (hierarchy above zoomed item only)
+    const crumbs = [{ id: "root", text: "Home" }];
+    let node = getParentItem(target);
     const ancestorCrumbs = [];
     while (node) {
         const text = getTextEl(node).textContent || "(empty)";
@@ -831,7 +833,7 @@ function applyZoom() {
         node = getParentItem(node);
     }
     ancestorCrumbs.reverse();
-    crumbs = crumbs.concat(ancestorCrumbs);
+    crumbs.push(...ancestorCrumbs);
     for (let i = 0; i < crumbs.length; i++) {
         if (i > 0) {
             const sep = document.createElement("span");
@@ -845,6 +847,8 @@ function applyZoom() {
         span.textContent = crumbs[i].text;
         breadcrumbs.appendChild(span);
     }
+    // Show zoomed item text as title
+    zoomTitle.textContent = getTextEl(target).textContent || "(empty)";
 }
 
 function zoomTo(id) {
@@ -1807,6 +1811,9 @@ async function main() {
     const breadcrumbs = document.createElement("div");
     breadcrumbs.id = "breadcrumbs";
     document.body.appendChild(breadcrumbs);
+    const zoomTitle = document.createElement("h1");
+    zoomTitle.id = "zoom-title";
+    document.body.appendChild(zoomTitle);
     const outline = document.createElement("div");
     outline.id = "outline";
     document.body.appendChild(outline);
@@ -1842,6 +1849,9 @@ async function main() {
         const breadcrumbs = document.createElement("div");
         breadcrumbs.id = "breadcrumbs";
         document.body.appendChild(breadcrumbs);
+        const zoomTitle = document.createElement("h1");
+        zoomTitle.id = "zoom-title";
+        document.body.appendChild(zoomTitle);
         const outline = document.createElement("div");
         outline.id = "outline";
         document.body.appendChild(outline);

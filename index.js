@@ -121,35 +121,9 @@ function getParentItem(item) {
     return parent;
 }
 
-function isVisible(el) {
-    let node = el;
-    while (node && node.id !== "outline") {
-        if (node.classList.contains("zoom-hidden")) return false;
-        if (node.classList.contains("children") &&
-            node.parentElement &&
-            node.parentElement.classList.contains("collapsed")) {
-            return false;
-        }
-        if (node.classList.contains("row") &&
-            node.parentElement &&
-            (node.parentElement.classList.contains("zoom-root") ||
-             node.parentElement.classList.contains("zoom-ancestor"))) {
-            return false;
-        }
-        node = node.parentElement;
-    }
-    return true;
-}
-
 function getVisibleItems() {
     const allTexts = document.querySelectorAll("#outline .text");
-    const visible = [];
-    for (const text of allTexts) {
-        if (isVisible(text)) {
-            visible.push(text);
-        }
-    }
-    return visible;
+    return Array.from(allTexts).filter(t => t.checkVisibility());
 }
 
 function updateToggle(item) {

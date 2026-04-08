@@ -14,12 +14,30 @@ Tiny Notes should never contact the sync server and never save anything
 to local storage. Make sure demo-mode remains detached and
 non-persistent in all future code changes.
 
+## Scope
+
+Assume Tiny Notes would only be used for a small to moderate amount of
+notes. As a rough guideline, you can assume less than one hundred
+thousand bullets and less than one megabyte size for the synced
+`notes.json` file. You can assume all notes fit just fine both in memory
+and in the DOM.
+
 ## General
 
 * Always run `direnv exec . make check` after your changes
 * Always run `direnv exec . make test` after editing `db.py`
 * Don't worry about catching errors (as we have no real users)
 * Don't worry about data migrations (as we have no real users)
+
+## Git
+
+Start your commit message title with an appropriate verb like "Add",
+"Fix" or "Refactor" that describes the nature of the change. When fixing
+an issue, always explain both the problem and the fix in the commit
+message. When executing git to make a commit, always use the shell
+heredoc ("<<EOF") syntax for your commit message and wrap lines at 72
+characters. If fixing something related to a previous commit, always
+reference that previous commit in the message by its commit hash.
 
 ## CSS
 
@@ -37,7 +55,7 @@ non-persistent in all future code changes.
 * Minimize the amount of libraries used
 * No frameworks!
 * Skip curly braces in single-line for and while loops
-* Skip parameter parantheses in single-argument arrow functions
+* Skip parameter parentheses in single-argument arrow functions
 * Use const instead of let whenever applicable
 * Use double-quotes for strings
 * Use template literal strings instead of string concatenation

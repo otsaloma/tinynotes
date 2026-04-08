@@ -69,6 +69,7 @@ body {
   display: none;
 }
 
+.item.collapsed.zoom-ancestor > .children,
 .item.collapsed.zoom-root > .children {
   display: block;
 }
@@ -174,18 +175,12 @@ body {
   display: none;
 }
 
-.zoom-ancestor > .children {
-  padding-left: 0;
-}
-
-.zoom-ancestor > .row {
-  display: none;
-}
-
+.zoom-ancestor > .children,
 .zoom-root > .children {
   padding-left: 0;
 }
 
+.zoom-ancestor > .row,
 .zoom-root > .row {
   display: none;
 }

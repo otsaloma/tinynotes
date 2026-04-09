@@ -48,6 +48,12 @@ body {
   user-select: none;
 }
 
+@media (max-width: 600px) {
+  #breadcrumbs {
+    margin-top: 2rem;
+  }
+}
+
 .breadcrumb {
   cursor: pointer;
   opacity: 0.5;

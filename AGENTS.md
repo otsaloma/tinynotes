@@ -38,6 +38,9 @@ message. When executing git to make a commit, always use the shell
 heredoc ("<<EOF") syntax for your commit message and wrap lines at 72
 characters. If fixing something related to a previous commit, always
 reference that previous commit in the message by its commit hash.
+When making a commit, always add yourself as Co-Authored-By, including
+your model name and version, example:
+`Co-Authored-By: ACME Transformer 1.2 <noreply@acme.com>`.
 
 ## CSS
 

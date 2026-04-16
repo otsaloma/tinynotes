@@ -152,6 +152,12 @@ body {
   word-break: break-word;
 }
 
+/* Firefox needs a line box in empty contenteditable elements to keep
+   the bullet aligned to the text baseline before typing starts. */
+.text:empty::before {
+  content: "\200b";
+}
+
 .text a {
   color: var(--color-link);
   cursor: pointer;

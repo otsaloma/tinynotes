@@ -166,6 +166,12 @@ body {
   text-underline-offset: 5px;
 }
 
+/* Use the selection color instead. */
+.item.selected > .row > .text a {
+  color: inherit;
+  text-decoration-color: inherit;
+}
+
 .item.selected > .row {
   background-color: var(--color-selection);
   color: white;
@@ -209,6 +215,11 @@ body {
 .text.bg-red    { background-color: var(--color-bg-red);    }
 .text.bg-violet { background-color: var(--color-bg-violet); }
 .text.bg-yellow { background-color: var(--color-bg-yellow); }
+
+/* Use the selection background color instead. */
+.item.selected > .row > .text[class*="bg-"] {
+  background-color: inherit;
+}
 
 #toast {
   background-color: var(--color-text);

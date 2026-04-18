@@ -93,6 +93,24 @@ body {
 
 .row:has(> .text[class*="bg-"]) {
   cursor: text;
+  display: block;
+  /* toggle width + bullet width + bullet margin-right */
+  padding-left: calc(16px + 1lh + 6px);
+}
+
+/* Color only the extent of text. Use block layout with
+   inline-block children so that box-decoration-break below
+   can fragment the inline text across line boxes. */
+.row:has(> .text[class*="bg-"]) > .toggle {
+  display: inline-block;
+  /* Pull toggle back into the padding area. */
+  margin-left: calc(-16px - 1lh - 6px);
+  vertical-align: baseline;
+}
+
+.row:has(> .text[class*="bg-"]) > .bullet {
+  display: inline-block;
+  vertical-align: baseline;
 }
 
 .toggle {
@@ -200,13 +218,15 @@ body {
 
 .zoom-ancestor > .row,
 .zoom-root > .row {
-  display: none;
+  display: none !important;
 }
 
 /* Color only the extent of text. */
 .text[class*="bg-"] {
-  flex: 0 1 auto;
-  min-width: 1em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  display: inline;
+  padding: 4px 0;
 }
 
 .text.bg-blue   { background-color: var(--color-bg-blue);   }

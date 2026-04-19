@@ -9,7 +9,7 @@ file `db.py`. Tiny Notes is essentially a simplified Workflowy clone.
 
 ## Demo Mode
 
-Tiny Notes has a demo-mode with URL parameter "demo=1". In demo-mode,
+Tiny Notes has a demo-mode with URL parameter `demo=1`. In demo-mode,
 Tiny Notes should never contact the sync server and never save anything
 to local storage. Make sure demo-mode remains detached and
 non-persistent in all future code changes.
@@ -37,13 +37,14 @@ an issue, always explain both the problem and the fix in the commit
 message. When executing git to make a commit, always use the shell
 heredoc ("<<EOF") syntax for your commit message and wrap lines at 72
 characters. If fixing something related to a previous commit, always
-reference that previous commit in the message by its commit hash.
-When making a commit, always add yourself as Co-Authored-By, including
-your model name and full version number, example:
-`Co-Authored-By: ACME Transformer 1.2 <noreply@acme.com>`.
+reference that previous commit in the message by its commit hash. Always
+add yourself as Co-Authored-By, including your model name and full
+version number, example: `Co-Authored-By: ACME Transformer 1.2 <noreply@acme.com>`.
 
 ## CSS
 
+* Add a comment for non-obvious selectors, such as `.text:empty::before`
+* Add a comment when using `calc` in a non-obvious way
 * Define all colors as variables under :root
 * Indent with two spaces
 * Minimize the amount of different colors used
@@ -57,6 +58,10 @@ your model name and full version number, example:
 * Indent with four spaces
 * Minimize the amount of libraries used
 * No frameworks!
+* Prefer to extract separate, clearly named functions for actions
+  instead of overloading giant event handlers, example: `Control+C`
+  should have a key event handler, but the functional implementation
+  should be a function `copyText` called by that handler
 * Skip curly braces in single-line for and while loops
 * Skip parameter parentheses in single-argument arrow functions
 * Use const instead of let whenever applicable

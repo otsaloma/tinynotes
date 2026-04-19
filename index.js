@@ -152,8 +152,30 @@ function setSelection(items) {
         item.classList.add("selected");
 }
 
-function getSiblingItems(container) {
-    return Array.from(container.querySelectorAll(":scope > .item"));
+function getVisibleItemList() {
+    return getVisibleItems().map(t => t.closest(".item"));
+}
+
+function getSelectionRoots() {
+    const set = new Set(selectedItems);
+    return selectedItems.filter(item => {
+        const parent = getParentItem(item);
+        return !parent || !set.has(parent);
+    });
+}
+
+function groupRootsByParent(roots) {
+    const groups = [];
+    let current = null;
+    for (const root of roots) {
+        const parent = root.parentElement;
+        if (!current || current.parent !== parent) {
+            current = { parent, roots: [] };
+            groups.push(current);
+        }
+        current.roots.push(root);
+    }
+    return groups;
 }
 
 // Multi-Select Operations
@@ -163,39 +185,38 @@ function handleShiftArrowDown(e) {
     const textEl = document.activeElement;
     const item = textEl.closest ? textEl.closest(".item") : null;
     if (!item) return;
-    const container = item.parentElement;
-    const siblings = getSiblingItems(container);
+    const visible = getVisibleItemList();
 
     if (selectedItems.length === 0) {
-        const idx = siblings.indexOf(item);
-        if (idx < siblings.length - 1) {
+        const idx = visible.indexOf(item);
+        if (idx >= 0 && idx < visible.length - 1) {
             selectionAnchor = item;
-            setSelection([item, siblings[idx + 1]]);
+            setSelection([item, visible[idx + 1]]);
             window.getSelection().removeAllRanges();
         }
     } else {
-        const anchorIdx = siblings.indexOf(selectionAnchor);
+        const anchorIdx = visible.indexOf(selectionAnchor);
         const lastSelected = selectedItems[selectedItems.length - 1];
         const firstSelected = selectedItems[0];
-        const lastIdx = siblings.indexOf(lastSelected);
-        const firstIdx = siblings.indexOf(firstSelected);
+        const lastIdx = visible.indexOf(lastSelected);
+        const firstIdx = visible.indexOf(firstSelected);
 
         if (anchorIdx === firstIdx) {
             // Extending downward
-            if (lastIdx < siblings.length - 1) {
-                setSelection(siblings.slice(firstIdx, lastIdx + 2));
+            if (lastIdx < visible.length - 1) {
+                setSelection(visible.slice(firstIdx, lastIdx + 2));
                 selectionAnchor = firstSelected;
                 window.getSelection().removeAllRanges();
             }
         } else {
             // Contracting from top
             if (selectedItems.length > 2) {
-                setSelection(siblings.slice(firstIdx + 1, lastIdx + 1));
+                setSelection(visible.slice(firstIdx + 1, lastIdx + 1));
                 selectionAnchor = lastSelected;
                 window.getSelection().removeAllRanges();
             } else {
                 clearSelection();
-                const textToFocus = getTextEl(siblings[firstIdx + 1]);
+                const textToFocus = getTextEl(visible[firstIdx + 1]);
                 textToFocus.focus();
                 setCursorPos(textToFocus, textToFocus.textContent.length);
             }
@@ -208,39 +229,38 @@ function handleShiftArrowUp(e) {
     const textEl = document.activeElement;
     const item = textEl.closest ? textEl.closest(".item") : null;
     if (!item) return;
-    const container = item.parentElement;
-    const siblings = getSiblingItems(container);
+    const visible = getVisibleItemList();
 
     if (selectedItems.length === 0) {
-        const idx = siblings.indexOf(item);
+        const idx = visible.indexOf(item);
         if (idx > 0) {
             selectionAnchor = item;
-            setSelection([siblings[idx - 1], item]);
+            setSelection([visible[idx - 1], item]);
             window.getSelection().removeAllRanges();
         }
     } else {
-        const anchorIdx = siblings.indexOf(selectionAnchor);
+        const anchorIdx = visible.indexOf(selectionAnchor);
         const lastSelected = selectedItems[selectedItems.length - 1];
         const firstSelected = selectedItems[0];
-        const lastIdx = siblings.indexOf(lastSelected);
-        const firstIdx = siblings.indexOf(firstSelected);
+        const lastIdx = visible.indexOf(lastSelected);
+        const firstIdx = visible.indexOf(firstSelected);
 
         if (anchorIdx === lastIdx) {
             // Extending upward
             if (firstIdx > 0) {
-                setSelection(siblings.slice(firstIdx - 1, lastIdx + 1));
+                setSelection(visible.slice(firstIdx - 1, lastIdx + 1));
                 selectionAnchor = lastSelected;
                 window.getSelection().removeAllRanges();
             }
         } else {
             // Contracting from bottom
             if (selectedItems.length > 2) {
-                setSelection(siblings.slice(firstIdx, lastIdx));
+                setSelection(visible.slice(firstIdx, lastIdx));
                 selectionAnchor = firstSelected;
                 window.getSelection().removeAllRanges();
             } else {
                 clearSelection();
-                const textToFocus = getTextEl(siblings[lastIdx - 1]);
+                const textToFocus = getTextEl(visible[lastIdx - 1]);
                 textToFocus.focus();
                 setCursorPos(textToFocus, textToFocus.textContent.length);
             }
@@ -251,72 +271,119 @@ function handleShiftArrowUp(e) {
 function handleTabMulti() {
     commitTextCheckpoint();
     pushUndo();
-    const firstItem = selectedItems[0];
-    const prevItem = getPrevItem(firstItem);
-    if (!prevItem || selectedItems.includes(prevItem)) return;
-    if (prevItem.classList.contains("collapsed")) {
-        prevItem.classList.remove("collapsed");
+    const activeText = document.activeElement;
+    const cursorPos = activeText && activeText.classList.contains("text") ?
+        getCursorPos(activeText) : null;
+    const selectedSet = new Set(selectedItems);
+    const roots = getSelectionRoots();
+    const groups = groupRootsByParent(roots);
+    for (const group of groups) {
+        let target = getPrevItem(group.roots[0]);
+        while (target && selectedSet.has(target))
+            target = getPrevItem(target);
+        if (!target) continue;
+        if (target.classList.contains("collapsed"))
+            target.classList.remove("collapsed");
+        const targetChildrenEl = getChildrenEl(target);
+        const oldParent = getParentItem(group.roots[0]);
+        for (const root of group.roots)
+            targetChildrenEl.appendChild(root);
+        updateToggle(target);
+        if (oldParent) updateToggle(oldParent);
     }
-    const prevChildrenEl = getChildrenEl(prevItem);
-    const oldParent = getParentItem(firstItem);
-    for (const item of selectedItems)
-        prevChildrenEl.appendChild(item);
-    updateToggle(prevItem);
-    if (oldParent) updateToggle(oldParent);
+    if (cursorPos !== null) {
+        suppressSelectionClear = true;
+        activeText.focus();
+        setCursorPos(activeText, cursorPos);
+    }
     save();
 }
 
 function handleShiftTabMulti() {
     commitTextCheckpoint();
     pushUndo();
-    const firstItem = selectedItems[0];
-    const lastItem = selectedItems[selectedItems.length - 1];
-    const parentItem = getParentItem(firstItem);
-    if (!parentItem) return;
-    if (parentItem.classList.contains("zoom-root")) return;
-    const grandparentContainer = parentItem.parentElement;
-    // Gather following siblings after last selected item
-    const followingSiblings = [];
-    let sibling = getNextItem(lastItem);
-    while (sibling) {
-        followingSiblings.push(sibling);
-        sibling = getNextItem(sibling);
+    const activeText = document.activeElement;
+    const cursorPos = activeText && activeText.classList.contains("text") ?
+        getCursorPos(activeText) : null;
+    const selectedSet = new Set(selectedItems);
+    const roots = getSelectionRoots();
+    const groups = groupRootsByParent(roots);
+    for (const group of groups) {
+        const firstRoot = group.roots[0];
+        const lastRoot = group.roots[group.roots.length - 1];
+        const parentItem = getParentItem(firstRoot);
+        if (!parentItem) continue;
+        if (parentItem.classList.contains("zoom-root")) continue;
+        const grandparentContainer = parentItem.parentElement;
+        // Gather following non-selected siblings after last root
+        const followingSiblings = [];
+        let sibling = getNextItem(lastRoot);
+        while (sibling) {
+            if (!selectedSet.has(sibling))
+                followingSiblings.push(sibling);
+            sibling = getNextItem(sibling);
+        }
+        // Move following siblings into last root's children
+        const lastChildrenEl = getChildrenEl(lastRoot);
+        for (const s of followingSiblings)
+            lastChildrenEl.appendChild(s);
+        // Move group roots after parentItem in grandparent
+        let insertRef = parentItem.nextSibling;
+        for (const root of group.roots) {
+            grandparentContainer.insertBefore(root, insertRef);
+            insertRef = root.nextSibling;
+        }
+        updateToggle(parentItem);
+        for (const root of group.roots)
+            updateToggle(root);
     }
-    // Move following siblings into last selected item's children
-    const lastChildrenEl = getChildrenEl(lastItem);
-    for (const s of followingSiblings)
-        lastChildrenEl.appendChild(s);
-    // Move all selected items after parentItem in grandparent
-    let insertRef = parentItem.nextSibling;
-    for (const item of selectedItems) {
-        grandparentContainer.insertBefore(item, insertRef);
-        insertRef = item.nextSibling;
+    if (cursorPos !== null) {
+        suppressSelectionClear = true;
+        activeText.focus();
+        setCursorPos(activeText, cursorPos);
     }
-    updateToggle(parentItem);
-    for (const item of selectedItems)
-        updateToggle(item);
     save();
 }
 
 function handleDeleteMulti() {
     commitTextCheckpoint();
     pushUndo();
-    const firstItem = selectedItems[0];
-    const lastItem = selectedItems[selectedItems.length - 1];
-    // Find focus target
-    let prevSibling = getPrevItem(firstItem);
-    while (prevSibling && selectedItems.includes(prevSibling))
-        prevSibling = getPrevItem(prevSibling);
-    let nextSibling = getNextItem(lastItem);
-    while (nextSibling && selectedItems.includes(nextSibling))
-        nextSibling = getNextItem(nextSibling);
-    const parentItem = getParentItem(firstItem);
-    const focusTarget = prevSibling || nextSibling || parentItem;
-    // Remove all selected items
-    for (const item of selectedItems)
-        item.remove();
+    const selectedSet = new Set(selectedItems);
+    const roots = getSelectionRoots();
+    const firstRoot = roots[0];
+    const lastRoot = roots[roots.length - 1];
+    // Find focus target in visible document order
+    const visible = getVisibleItemList();
+    const firstIdx = visible.indexOf(firstRoot);
+    const lastIdx = visible.indexOf(lastRoot);
+    let focusTarget = null;
+    for (let i = firstIdx - 1; i >= 0; i--) {
+        if (!selectedSet.has(visible[i])) {
+            focusTarget = visible[i];
+            break;
+        }
+    }
+    if (!focusTarget) {
+        for (let i = lastIdx + 1; i < visible.length; i++) {
+            if (!selectedSet.has(visible[i])) {
+                focusTarget = visible[i];
+                break;
+            }
+        }
+    }
+    if (!focusTarget) focusTarget = getParentItem(firstRoot);
+    // Collect original parents for toggle refresh
+    const parents = new Set();
+    for (const root of roots) {
+        const parent = getParentItem(root);
+        if (parent) parents.add(parent);
+    }
+    // Remove all roots (descendants go with them)
+    for (const root of roots)
+        root.remove();
     clearSelection();
-    if (parentItem) updateToggle(parentItem);
+    for (const parent of parents)
+        updateToggle(parent);
     // Handle empty outline
     const outline = document.getElementById("outline");
     if (!outline.querySelector(".item")) {
@@ -1270,8 +1337,9 @@ function setupEvents() {
                 commitTextCheckpoint();
                 pushUndo();
                 const completing = selectedItems.some(it => !it.classList.contains("completed"));
-                for (const it of selectedItems) {
-                    const items = [it, ...it.querySelectorAll(".item")];
+                const roots = getSelectionRoots();
+                for (const root of roots) {
+                    const items = [root, ...root.querySelectorAll(".item")];
                     for (const desc of items) {
                         if (completing) {
                             desc.classList.add("completed");
@@ -1288,16 +1356,18 @@ function setupEvents() {
             // Match both Ctrl+C and Ctrl+Shift+C (copy as text)
             if ((e.key === "c" || e.key === "C") && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
-                const text = selectedItems.map(it => itemToText(it, 0)).join("");
+                const roots = getSelectionRoots();
+                const text = roots.map(it => itemToText(it, 0)).join("");
                 navigator.clipboard.writeText(text);
-                notify(`Copied ${selectedItems.length} bullets`);
+                notify(`Copied ${roots.length} bullets`);
                 return;
             }
             if (e.key === "x" && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
-                const text = selectedItems.map(it => itemToText(it, 0)).join("");
+                const roots = getSelectionRoots();
+                const text = roots.map(it => itemToText(it, 0)).join("");
                 navigator.clipboard.writeText(text);
-                notify(`Cut ${selectedItems.length} bullets`);
+                notify(`Cut ${roots.length} bullets`);
                 handleDeleteMulti();
                 return;
             }
@@ -1419,9 +1489,10 @@ function setupEvents() {
             if (e.key === "C" && e.shiftKey) {
                 e.preventDefault();
                 if (selectedItems.length > 0) {
-                    const text = selectedItems.map(it => itemToText(it, 0)).join("");
+                    const roots = getSelectionRoots();
+                    const text = roots.map(it => itemToText(it, 0)).join("");
                     navigator.clipboard.writeText(text);
-                    notify(`Copied ${selectedItems.length} bullets`);
+                    notify(`Copied ${roots.length} bullets`);
                 } else {
                     const focused = document.activeElement;
                     if (focused && focused.classList.contains("text"))

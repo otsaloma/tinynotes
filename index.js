@@ -1373,35 +1373,7 @@ function setupEvents() {
         renderLinks(e.target);
     });
     outline.addEventListener("click", e => {
-        // Shift+Click range selection
-        if (e.shiftKey && (e.target.classList.contains("text") || e.target.classList.contains("bullet"))) {
-            e.preventDefault();
-            const clickedItem = e.target.closest(".item");
-            if (!clickedItem) return;
-            let anchorItem = selectionAnchor;
-            if (!anchorItem) {
-                const focused = document.activeElement;
-                if (focused && focused.classList.contains("text")) {
-                    anchorItem = focused.closest(".item");
-                }
-            }
-            if (!anchorItem) return;
-            // Must be same parent
-            if (anchorItem.parentElement !== clickedItem.parentElement) return;
-            const container = anchorItem.parentElement;
-            const siblings = getSiblingItems(container);
-            const anchorIdx = siblings.indexOf(anchorItem);
-            const clickedIdx = siblings.indexOf(clickedItem);
-            if (anchorIdx === -1 || clickedIdx === -1) return;
-            const start = Math.min(anchorIdx, clickedIdx);
-            const end = Math.max(anchorIdx, clickedIdx);
-            setSelection(siblings.slice(start, end + 1));
-            selectionAnchor = anchorItem;
-            window.getSelection().removeAllRanges();
-            return;
-        }
-        // Click without shift clears selection
-        if (selectedItems.length > 0 && !e.shiftKey) {
+        if (selectedItems.length > 0) {
             clearSelection();
         }
         if (e.target.classList.contains("toggle")) {

@@ -18,6 +18,7 @@ const TRIANGLE_RIGHT = "⋯";
 let currentVersion = null;
 let dragDidDrop = false;
 let dragState = null;
+let textDragState = null;
 let focusEntryItemId = null;
 let focusEntryState = null;
 let focusEntryText = null;
@@ -1418,6 +1419,8 @@ function setupEvents() {
         if (e.target.classList.contains("bullet") && e.button === 0) {
             const item = e.target.closest(".item");
             dragState = { item, startX: e.clientX, startY: e.clientY, isDragging: false };
+        } else if (e.target.classList.contains("text") && e.button === 0) {
+            textDragState = { startItem: e.target.closest(".item"), active: false };
         }
     });
     outline.addEventListener("focusin", e => {
@@ -1443,6 +1446,10 @@ function setupEvents() {
         renderLinks(e.target);
     });
     outline.addEventListener("click", e => {
+        if (dragDidDrop) {
+            dragDidDrop = false;
+            return;
+        }
         if (selectedItems.length > 0) {
             clearSelection();
         }
@@ -1458,10 +1465,6 @@ function setupEvents() {
                 sel.collapseToEnd();
             }
         } else if (e.target.classList.contains("bullet")) {
-            if (dragDidDrop) {
-                dragDidDrop = false;
-                return;
-            }
             const item = e.target.closest(".item");
             zoomTo(item.dataset.id);
             if (!hasChildren(item)) {
@@ -1539,6 +1542,26 @@ function setupEvents() {
     dragIndicator.className = "drag-indicator";
     document.body.appendChild(dragIndicator);
     document.addEventListener("mousemove", e => {
+        if (textDragState) {
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            const currentItem = el && el.closest(".item");
+            if (!currentItem) return;
+            if (!textDragState.active && currentItem !== textDragState.startItem) {
+                window.getSelection().removeAllRanges();
+                document.body.style.userSelect = "none";
+                textDragState.active = true;
+            }
+            if (textDragState.active) {
+                const visible = getVisibleItemList();
+                const a = visible.indexOf(textDragState.startItem);
+                const b = visible.indexOf(currentItem);
+                if (a === -1 || b === -1) return;
+                const range = visible.slice(Math.min(a, b), Math.max(a, b) + 1);
+                setSelection(range);
+                selectionAnchor = textDragState.startItem;
+            }
+            return;
+        }
         if (!dragState) return;
         const dx = e.clientX - dragState.startX;
         const dy = e.clientY - dragState.startY;
@@ -1557,6 +1580,14 @@ function setupEvents() {
         }
     });
     document.addEventListener("mouseup", e => {
+        if (textDragState) {
+            if (textDragState.active) {
+                document.body.style.userSelect = "";
+                dragDidDrop = true;
+            }
+            textDragState = null;
+            return;
+        }
         if (!dragState) return;
         if (dragState.isDragging) {
             e.preventDefault();

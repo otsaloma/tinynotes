@@ -42,12 +42,33 @@ body {
   }
 }
 
+/* Pull into body's top padding so the sticky background covers the
+   full area above the breadcrumbs once pinned at top: 0. Padding
+   (not child margins) is used for bottom spacing so it stays inside
+   the wrapper's painted area and bullets don't peek through. */
+#header {
+  background-color: var(--color-background);
+  margin-top: -3rem;
+  padding-bottom: 1rem;
+  padding-top: 3rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+@media (max-width: 600px) {
+  #header {
+    margin-top: -1rem;
+    padding-top: 1rem;
+  }
+}
+
 #breadcrumbs {
-  margin-bottom: 1rem;
   margin-left: 48px;
   user-select: none;
 }
 
+/* Push below the menu so a long breadcrumb trail can't overlap it. */
 @media (max-width: 600px) {
   #breadcrumbs {
     margin-top: 2rem;
@@ -199,8 +220,7 @@ body {
   font-size: 1.5rem;
   font-weight: bold;
   line-height: 1;
-  margin-bottom: 1rem;
-  margin-left: 48px;
+  margin: 1rem 0 0 48px;
 }
 
 #zoom-title:empty {
@@ -260,6 +280,7 @@ body {
   right: 4rem;
   top: 3rem;
   user-select: none;
+  z-index: 20;
 }
 
 @media (max-width: 600px) {

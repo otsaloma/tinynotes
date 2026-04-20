@@ -1827,12 +1827,15 @@ function createMenu() {
 
 async function main() {
     createMenu();
+    const header = document.createElement("div");
+    header.id = "header";
     const breadcrumbs = document.createElement("div");
     breadcrumbs.id = "breadcrumbs";
-    document.body.appendChild(breadcrumbs);
+    header.appendChild(breadcrumbs);
     const zoomTitle = document.createElement("h1");
     zoomTitle.id = "zoom-title";
-    document.body.appendChild(zoomTitle);
+    header.appendChild(zoomTitle);
+    document.body.appendChild(header);
     const outline = document.createElement("div");
     outline.id = "outline";
     document.body.appendChild(outline);
@@ -1864,12 +1867,15 @@ async function main() {
 (async function() {
     if (DEMO) {
         createMenu();
+        const header = document.createElement("div");
+        header.id = "header";
         const breadcrumbs = document.createElement("div");
         breadcrumbs.id = "breadcrumbs";
-        document.body.appendChild(breadcrumbs);
+        header.appendChild(breadcrumbs);
         const zoomTitle = document.createElement("h1");
         zoomTitle.id = "zoom-title";
-        document.body.appendChild(zoomTitle);
+        header.appendChild(zoomTitle);
+        document.body.appendChild(header);
         const outline = document.createElement("div");
         outline.id = "outline";
         document.body.appendChild(outline);

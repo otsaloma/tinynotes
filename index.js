@@ -1753,13 +1753,13 @@ function createMenu() {
         }],
         ["Shift+Up/Down", "Multi-Select"],
         "---",
-        [`${alt}+Y`, "Background Yellow", textEl => applyColor(textEl.closest(".item"), "yellow")],
-        [`${alt}+O`, "Background Orange", textEl => applyColor(textEl.closest(".item"), "orange")],
-        [`${alt}+R`, "Background Red", textEl => applyColor(textEl.closest(".item"), "red")],
-        [`${alt}+V`, "Background Violet", textEl => applyColor(textEl.closest(".item"), "violet")],
-        [`${alt}+B`, "Background Blue", textEl => applyColor(textEl.closest(".item"), "blue")],
-        [`${alt}+G`, "Background Green", textEl => applyColor(textEl.closest(".item"), "green")],
-        [`${alt}+C`, "Background Clear", textEl => applyColor(textEl.closest(".item"), null)],
+        [`${alt}+Y`, {swatch: "yellow", label: "Yellow"}, textEl => applyColor(textEl.closest(".item"), "yellow")],
+        [`${alt}+O`, {swatch: "orange", label: "Orange"}, textEl => applyColor(textEl.closest(".item"), "orange")],
+        [`${alt}+R`, {swatch: "red", label: "Red"}, textEl => applyColor(textEl.closest(".item"), "red")],
+        [`${alt}+V`, {swatch: "violet", label: "Violet"}, textEl => applyColor(textEl.closest(".item"), "violet")],
+        [`${alt}+B`, {swatch: "blue", label: "Blue"}, textEl => applyColor(textEl.closest(".item"), "blue")],
+        [`${alt}+G`, {swatch: "green", label: "Green"}, textEl => applyColor(textEl.closest(".item"), "green")],
+        [`${alt}+C`, {swatch: null, label: "Clear"}, textEl => applyColor(textEl.closest(".item"), null)],
     ];
     const menu = document.createElement("div");
     menu.id = "menu";
@@ -1798,7 +1798,15 @@ function createMenu() {
             });
         }
         const descEl = document.createElement("span");
-        descEl.textContent = desc;
+        if (typeof desc === "string") {
+            descEl.textContent = desc;
+        } else {
+            const swatch = document.createElement("span");
+            swatch.className = "menu-swatch";
+            if (desc.swatch) swatch.classList.add(`bg-${desc.swatch}`);
+            descEl.appendChild(swatch);
+            descEl.appendChild(document.createTextNode(desc.label));
+        }
         const keyEl = document.createElement("span");
         keyEl.className = "menu-key";
         const parts = key.split("+");

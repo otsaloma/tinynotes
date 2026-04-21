@@ -356,6 +356,23 @@ body {
   margin: 0;
 }
 
+.menu-swatch {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  display: inline-block;
+  height: 0.8em;
+  margin-right: 9px;
+  vertical-align: -2px;
+  width: 1.6em;
+}
+
+.menu-swatch.bg-blue   { background-color: var(--color-bg-blue);   }
+.menu-swatch.bg-green  { background-color: var(--color-bg-green);  }
+.menu-swatch.bg-orange { background-color: var(--color-bg-orange); }
+.menu-swatch.bg-red    { background-color: var(--color-bg-red);    }
+.menu-swatch.bg-violet { background-color: var(--color-bg-violet); }
+.menu-swatch.bg-yellow { background-color: var(--color-bg-yellow); }
+
 .menu-separator {
   border: none;
   border-top: 1px solid white;

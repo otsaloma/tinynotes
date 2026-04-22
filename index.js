@@ -1696,7 +1696,8 @@ async function refreshTokens() {
 
 async function isAuthenticated() {
     const token = localStorage.getItem(storageKey("id_token"));
-    if (token && decodeJwtPayload(token).exp * 1000 > Date.now()) return true;
+    // Refresh proactively 24 hours before expiry to avoid mid-session failures.
+    if (token && decodeJwtPayload(token).exp * 1000 > Date.now() + 86400 * 1000) return true;
     return await refreshTokens();
 }
 

@@ -630,7 +630,7 @@ function save() {
 
 // Sync
 
-function updateSyncStatus(state) {
+function updateSyncStatus(state, status) {
     const el = document.getElementById("sync-status");
     if (!el) return;
     el.classList.remove("sync-error");
@@ -644,7 +644,7 @@ function updateSyncStatus(state) {
     } else if (state === "pending") {
         el.textContent = "sync pending";
     } else if (state === "error") {
-        el.textContent = "sync error";
+        el.textContent = `sync error ${status}`;
         el.classList.add("sync-error");
     } else if (state === "conflict") {
         el.textContent = "sync conflict";
@@ -681,9 +681,9 @@ async function syncToRemote(retry) {
         } else if (response.status === 401 && !retry) {
             const refreshed = await refreshTokens();
             if (refreshed) await syncToRemote(true);
-            else updateSyncStatus("error");
+            else updateSyncStatus("error", response.status);
         } else {
-            updateSyncStatus("error");
+            updateSyncStatus("error", response.status);
         }
     } catch {
         updateSyncStatus("error");
@@ -716,8 +716,10 @@ async function fetchFromRemote(retry) {
             const refreshed = await refreshTokens();
             if (refreshed) return await fetchFromRemote(true);
         }
+        updateSyncStatus("error", response.status);
         return null;
     } catch {
+        updateSyncStatus("error");
         return null;
     }
 }
@@ -1849,10 +1851,7 @@ async function main() {
     outline.id = "outline";
     document.body.appendChild(outline);
     const remote = await fetchFromRemote();
-    if (!remote) {
-        updateSyncStatus("error");
-        return;
-    }
+    if (!remote) return;
     if (remote.items && remote.items.length > 0) {
         deserialize(remote.items, outline);
     } else {

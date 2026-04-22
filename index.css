@@ -11,7 +11,6 @@
   --color-link: #3584e4;
   --color-selection: #3266d0;
   --color-text: #374151;
-  --color-text-error: #a51d2d;
   --font-family-monospace: Berkeley Mono, SF Mono, IBM Plex Mono, ui-monospace, monospace;
   --font-family-sans-serif: Avenir Next, system-ui, sans-serif;
   --font-size-main: 15px;
@@ -396,8 +395,9 @@ body {
 }
 
 #sync-status.sync-error {
-  color: var(--color-text-error);
+  background-color: var(--color-bg-red);
   opacity: 1;
+  padding: 1em 1.5em;
 }
 
 #login {

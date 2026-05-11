@@ -4,6 +4,7 @@ import boto3
 import json
 import os
 
+from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor
 
 ALLOWED_USERS = os.environ["ALLOWED_USERS"].split(":")
@@ -23,13 +24,19 @@ def get_notes(email):
         return {"items": [], "version": 0}
 
 def get_current_version(email):
+    key = f"{email}/notes.json"
     try:
-        key = f"{email}/notes.json"
         response = s3.head_object(Bucket=BUCKET, Key=key)
         metadata = response.get("Metadata", {})
         if version := metadata.get("version"):
             return int(version)
-        # Object exists but has no version metadata yet.
+    except ClientError as error:
+        if error.response["Error"]["Code"] == "404":
+            # First call for a new user with no notes yet.
+            return 0
+    # Object exists but has no version metadata yet,
+    # fall back on slower read + parse.
+    try:
         response = s3.get_object(Bucket=BUCKET, Key=key)
         data = json.loads(response["Body"].read())
         return data["version"]

@@ -1834,6 +1834,21 @@ function createMenu() {
     popover.appendChild(logoutRow);
     menu.appendChild(popover);
     document.body.appendChild(menu);
+    keepMenuVisible(menu);
+}
+
+// On iOS Safari position:fixed is resolved against the layout viewport,
+// not the visual viewport, so opening the keyboard scrolls #menu off the
+// top of the screen. Translate it to follow the visible visual viewport.
+function keepMenuVisible(menu) {
+    if (!window.visualViewport) return;
+    const vv = window.visualViewport;
+    const trackViewport = () => {
+        menu.style.transform = `translate(${-vv.offsetLeft}px, ${vv.offsetTop}px)`;
+    };
+    vv.addEventListener("resize", trackViewport);
+    vv.addEventListener("scroll", trackViewport);
+    trackViewport();
 }
 
 async function main() {

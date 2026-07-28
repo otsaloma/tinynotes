@@ -1,5 +1,4 @@
-Tiny Notes
-==========
+# Tiny Notes
 
 Tiny Notes is a simple note-taking web app that supports bullet-point
 notes, collapsible bullets and zoom-in bullets. The app itself is

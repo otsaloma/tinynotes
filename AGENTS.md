@@ -1,5 +1,4 @@
-AGENTS.md
-=========
+# AGENTS.md
 
 Tiny Notes is a simple note-taking web app that supports bullet-point
 notes, collapsible bullets and zoom-in bullets. The app itself is
@@ -28,18 +27,6 @@ and in the DOM.
 * Always run `direnv exec . make test` after editing `db.py`
 * Don't worry about catching errors (as we have no real users)
 * Don't worry about data migrations (as we have no real users)
-
-## Git
-
-Start your commit message title with an appropriate verb like "Add",
-"Fix" or "Refactor" that describes the nature of the change. When fixing
-an issue, always explain both the problem and the fix in the commit
-message. When executing git to make a commit, always use the shell
-heredoc ("<<EOF") syntax for your commit message and wrap lines at 72
-characters. If fixing something related to a previous commit, always
-reference that previous commit in the message by its commit hash. Always
-add yourself as Co-Authored-By, including your model name and full
-version number, example: `Co-Authored-By: ACME Transformer 1.2 <noreply@acme.com>`.
 
 ## CSS
 
@@ -78,6 +65,5 @@ version number, example: `Co-Authored-By: ACME Transformer 1.2 <noreply@acme.com
 
 ## Python
 
-* Follow PEP8
 * Use variable name `x` in list comprehensions
 * Use variable name `x` in single-argument lambda functions

@@ -83,8 +83,32 @@ body {
   opacity: 1;
 }
 
-.breadcrumb-sep {
+.breadcrumb-menu {
+  display: inline-block;
+  margin: 0 0.5rem;
+  position: relative;
+}
+
+.breadcrumb-toggle {
+  cursor: pointer;
   opacity: 0.5;
+  padding: 0 0.4rem;
+}
+
+.breadcrumb-toggle:hover {
+  opacity: 1;
+}
+
+.breadcrumb-popover {
+  left: 0;
+}
+
+/* Truncate long bullet texts to keep the popover narrow. */
+.breadcrumb-row {
+  margin: 3px 0;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .children {
@@ -298,7 +322,7 @@ body {
   opacity: 1;
 }
 
-#menu-popover {
+.popover {
   background: var(--color-text);
   border-radius: 12px;
   color: white;
@@ -306,13 +330,16 @@ body {
   font-size: var(--font-size-small);
   padding: 14px 18px;
   position: absolute;
-  right: 0;
   top: 100%;
   white-space: nowrap;
 }
 
-#menu-popover.visible {
+.popover.visible {
   display: block;
+}
+
+#menu-popover {
+  right: 0;
 }
 
 .menu-row {

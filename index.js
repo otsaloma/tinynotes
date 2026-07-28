@@ -818,16 +818,11 @@ function applyZoom() {
     const els = outline.querySelectorAll(".zoom-root, .zoom-ancestor, .zoom-hidden");
     for (const el of els)
         el.classList.remove("zoom-root", "zoom-ancestor", "zoom-hidden");
-    const breadcrumbs = document.getElementById("breadcrumbs");
     const zoomTitle = document.getElementById("zoom-title");
-    breadcrumbs.innerHTML = "";
     zoomTitle.textContent = "";
     if (!zoomedId) {
-        const home = document.createElement("span");
-        home.className = "breadcrumb";
-        home.dataset.id = "root";
-        home.textContent = "Home";
-        breadcrumbs.appendChild(home);
+        // At home everything is visible, no need for dropdowns.
+        renderBreadcrumbs([{ id: "root", text: "Home" }], false);
         return;
     }
     const target = getItemEl(zoomedId);
@@ -867,21 +862,59 @@ function applyZoom() {
     }
     ancestorCrumbs.reverse();
     crumbs.push(...ancestorCrumbs);
-    for (let i = 0; i < crumbs.length; i++) {
-        if (i > 0) {
-            const sep = document.createElement("span");
-            sep.className = "breadcrumb-sep";
-            sep.innerHTML = " &gt; ";
-            breadcrumbs.appendChild(sep);
-        }
-        const span = document.createElement("span");
-        span.className = "breadcrumb";
-        span.dataset.id = crumbs[i].id;
-        span.textContent = crumbs[i].text;
-        breadcrumbs.appendChild(span);
-    }
+    renderBreadcrumbs(crumbs, true);
     // Show zoomed item text as title
     zoomTitle.textContent = getTextEl(target).textContent || "(empty)";
+}
+
+function renderBreadcrumbs(crumbs, menus) {
+    const breadcrumbs = document.getElementById("breadcrumbs");
+    breadcrumbs.innerHTML = "";
+    for (const crumb of crumbs) {
+        const span = document.createElement("span");
+        span.className = "breadcrumb";
+        span.dataset.id = crumb.id;
+        span.textContent = crumb.text;
+        breadcrumbs.appendChild(span);
+        const menu = menus && createBreadcrumbMenu(crumb.id);
+        if (menu) breadcrumbs.appendChild(menu);
+    }
+}
+
+// Dropdown listing the direct children of a breadcrumb, allowing to
+// zoom to a sibling of the item currently zoomed to.
+function createBreadcrumbMenu(id) {
+    const parent = id === "root" ? document.getElementById("outline") : getChildrenEl(getItemEl(id));
+    const children = Array.from(parent.querySelectorAll(":scope > .item"));
+    if (children.length === 0) return null;
+    const menu = document.createElement("span");
+    menu.className = "breadcrumb-menu";
+    const toggle = document.createElement("span");
+    toggle.className = "breadcrumb-toggle";
+    toggle.textContent = "▼";
+    menu.appendChild(toggle);
+    const popover = document.createElement("div");
+    popover.className = "popover breadcrumb-popover";
+    for (const child of children.slice(0, 10)) {
+        const row = document.createElement("div");
+        row.className = "breadcrumb-row menu-action";
+        row.dataset.id = child.dataset.id;
+        row.textContent = getTextEl(child).textContent || "(empty)";
+        popover.appendChild(row);
+    }
+    if (children.length > 10) {
+        const row = document.createElement("div");
+        row.className = "breadcrumb-row";
+        row.textContent = "...";
+        popover.appendChild(row);
+    }
+    menu.appendChild(popover);
+    return menu;
+}
+
+function dismissBreadcrumbMenus() {
+    for (const el of document.querySelectorAll(".breadcrumb-popover.visible"))
+        el.classList.remove("visible");
 }
 
 function zoomTo(id) {
@@ -1535,10 +1568,26 @@ function setupEvents() {
         }
     });
     const breadcrumbs = document.getElementById("breadcrumbs");
+    // Keep the caret in place when clicking around the breadcrumbs.
+    breadcrumbs.addEventListener("mousedown", e => {
+        if (e.target.closest(".breadcrumb-menu")) e.preventDefault();
+    });
     breadcrumbs.addEventListener("click", e => {
         const crumbItem = e.target.closest(".breadcrumb");
-        if (!crumbItem) return;
-        zoomTo(crumbItem.dataset.id);
+        if (crumbItem) return zoomTo(crumbItem.dataset.id);
+        const toggle = e.target.closest(".breadcrumb-toggle");
+        if (toggle) {
+            const popover = toggle.nextElementSibling;
+            const visible = popover.classList.contains("visible");
+            dismissBreadcrumbMenus();
+            popover.classList.toggle("visible", !visible);
+            return;
+        }
+        const row = e.target.closest(".breadcrumb-row");
+        if (row && row.dataset.id) zoomTo(row.dataset.id);
+    });
+    document.addEventListener("mousedown", e => {
+        if (!e.target.closest(".breadcrumb-menu")) dismissBreadcrumbMenus();
     });
     const dragIndicator = document.createElement("div");
     dragIndicator.className = "drag-indicator";
@@ -1776,6 +1825,7 @@ function createMenu() {
     menu.addEventListener("mousedown", e => e.preventDefault());
     const popover = document.createElement("div");
     popover.id = "menu-popover";
+    popover.className = "popover";
     const dismissPopover = () => popover.classList.remove("visible");
     label.addEventListener("click", () => popover.classList.toggle("visible"));
     document.addEventListener("mousedown", e => {

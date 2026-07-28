@@ -1,6 +1,6 @@
 # -*- coding: utf-8-unix -*-
 
-PYTHON_VERSION := 3.13
+PYTHON_VERSION := 3.14
 PYTHON := python$(PYTHON_VERSION)
 VERSION := `date +%s`
 

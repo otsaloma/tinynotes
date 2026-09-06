@@ -1389,9 +1389,12 @@ function setupEvents() {
                 save();
                 return;
             }
-            // Match both Ctrl+C and Ctrl+Shift+C (copy as text)
+            // Match both Ctrl+C and Ctrl+Shift+C (copy as text). Stop
+            // propagation so the document-level Ctrl+Shift+C handler
+            // doesn't copy and notify a second time.
             if ((e.key === "c" || e.key === "C") && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
+                e.stopPropagation();
                 const roots = getSelectionRoots();
                 const text = roots.map(it => itemToText(it, 0)).join("");
                 navigator.clipboard.writeText(text);
@@ -1812,9 +1815,10 @@ function createMenu() {
         [
             ["Copy as text", `${ctrl}+Shift+C`, textEl => {
                 if (selectedItems.length > 0) {
-                    const text = selectedItems.map(it => itemToText(it, 0)).join("");
+                    const roots = getSelectionRoots();
+                    const text = roots.map(it => itemToText(it, 0)).join("");
                     navigator.clipboard.writeText(text);
-                    notify(`Copied ${selectedItems.length} bullets`);
+                    notify(`Copied ${roots.length} bullets`);
                 } else {
                     copyAsText(textEl.closest(".item"));
                 }

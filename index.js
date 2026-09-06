@@ -1782,36 +1782,57 @@ function createLoginPage() {
 
 // Main
 
+function createAction(name, key, onClick) {
+    const action = document.createElement("span");
+    action.className = "menu-action";
+    action.textContent = name;
+    if (key) action.title = key;
+    action.addEventListener("click", onClick);
+    return action;
+}
+
 function createMenu() {
     const isMac = navigator.platform.startsWith("Mac");
     const ctrl = isMac ? "Cmd" : "Ctrl";
     const alt = isMac ? "Opt" : "Alt";
-    const shortcuts = [
-        [`${ctrl}+Z`, "Undo", () => undo()],
-        [`${ctrl}+Shift+Z`, "Redo", () => redo()],
-        "---",
-        ["Tab", "Indent", textEl => indentItem(textEl)],
-        ["Shift+Tab", "Dedent", textEl => dedentItem(textEl)],
-        [`${ctrl}+Enter`, "Complete", textEl => toggleComplete(textEl.closest(".item"))],
-        [`${ctrl}+Shift+Backspace`, "Delete", textEl => deleteItem(textEl)],
-        [`${ctrl}+Shift+C`, "Copy As Text", textEl => {
-            if (selectedItems.length > 0) {
-                const text = selectedItems.map(it => itemToText(it, 0)).join("");
-                navigator.clipboard.writeText(text);
-                notify(`Copied ${selectedItems.length} bullets`);
-            } else {
-                copyAsText(textEl.closest(".item"));
-            }
-        }],
-        ["Shift+Up/Down", "Multi-Select"],
-        "---",
-        [`${alt}+Y`, {swatch: "yellow", label: "Yellow"}, textEl => applyColor(textEl.closest(".item"), "yellow")],
-        [`${alt}+O`, {swatch: "orange", label: "Orange"}, textEl => applyColor(textEl.closest(".item"), "orange")],
-        [`${alt}+R`, {swatch: "red", label: "Red"}, textEl => applyColor(textEl.closest(".item"), "red")],
-        [`${alt}+V`, {swatch: "violet", label: "Violet"}, textEl => applyColor(textEl.closest(".item"), "violet")],
-        [`${alt}+B`, {swatch: "blue", label: "Blue"}, textEl => applyColor(textEl.closest(".item"), "blue")],
-        [`${alt}+G`, {swatch: "green", label: "Green"}, textEl => applyColor(textEl.closest(".item"), "green")],
-        [`${alt}+C`, {swatch: null, label: "Clear"}, textEl => applyColor(textEl.closest(".item"), null)],
+    // Actions grouped into rows, related ones sharing a row.
+    const rows = [
+        [
+            ["Undo", `${ctrl}+Z`, () => undo()],
+            ["Redo", `${ctrl}+Shift+Z`, () => redo()],
+        ],
+        [
+            ["Indent", "Tab", textEl => indentItem(textEl)],
+            ["Dedent", "Shift+Tab", textEl => dedentItem(textEl)],
+        ],
+        [
+            ["Complete", `${ctrl}+Enter`, textEl => toggleComplete(textEl.closest(".item"))],
+            ["Delete", `${ctrl}+Shift+Backspace`, textEl => deleteItem(textEl)],
+        ],
+        [
+            ["Copy as text", `${ctrl}+Shift+C`, textEl => {
+                if (selectedItems.length > 0) {
+                    const text = selectedItems.map(it => itemToText(it, 0)).join("");
+                    navigator.clipboard.writeText(text);
+                    notify(`Copied ${selectedItems.length} bullets`);
+                } else {
+                    copyAsText(textEl.closest(".item"));
+                }
+            }],
+        ],
+    ];
+    const colors = [
+        [
+            ["Yellow", "yellow", `${alt}+Y`],
+            ["Orange", "orange", `${alt}+O`],
+            ["Red", "red", `${alt}+R`],
+            ["Violet", "violet", `${alt}+V`],
+        ],
+        [
+            ["Blue", "blue", `${alt}+B`],
+            ["Green", "green", `${alt}+G`],
+            ["Clear", null, `${alt}+C`],
+        ],
     ];
     const menu = document.createElement("div");
     menu.id = "menu";
@@ -1831,57 +1852,37 @@ function createMenu() {
     document.addEventListener("mousedown", e => {
         if (!menu.contains(e.target)) dismissPopover();
     });
-    for (const entry of shortcuts) {
-        if (entry === "---") {
-            const hr = document.createElement("hr");
-            hr.className = "menu-separator";
-            popover.appendChild(hr);
-            continue;
-        }
-        const [key, desc, action] = entry;
-        const row = document.createElement("div");
-        row.className = "menu-row";
-        if (action) {
-            row.classList.add("menu-action");
-            row.addEventListener("click", () => {
-                const active = document.activeElement;
-                if (!active || !active.classList.contains("text")) return;
-                dismissPopover();
-                action(active);
-            });
-        }
-        const descEl = document.createElement("span");
-        if (typeof desc === "string") {
-            descEl.textContent = desc;
-        } else {
-            const swatch = document.createElement("span");
-            swatch.className = "menu-swatch";
-            if (desc.swatch) swatch.classList.add(`bg-${desc.swatch}`);
-            descEl.appendChild(swatch);
-            descEl.appendChild(document.createTextNode(desc.label));
-        }
-        const keyEl = document.createElement("span");
-        keyEl.className = "menu-key";
-        const parts = key.split("+");
-        for (let i = 0; i < parts.length; i++) {
-            const kbd = document.createElement("kbd");
-            kbd.textContent = parts[i];
-            keyEl.appendChild(kbd);
-        }
-        row.appendChild(descEl);
-        row.appendChild(keyEl);
-        popover.appendChild(row);
+    // Only act on the item being edited, dropping the click if focus is elsewhere.
+    const activate = action => {
+        const active = document.activeElement;
+        if (!active || !active.classList.contains("text")) return;
+        dismissPopover();
+        action(active);
+    };
+    for (const row of rows) {
+        const rowEl = document.createElement("div");
+        rowEl.className = "menu-row";
+        for (const [name, key, action] of row)
+            rowEl.appendChild(createAction(name, key, () => activate(action)));
+        popover.appendChild(rowEl);
     }
-    const logoutSep = document.createElement("hr");
-    logoutSep.className = "menu-separator";
-    popover.appendChild(logoutSep);
     const logoutRow = document.createElement("div");
-    logoutRow.className = "menu-row menu-action";
-    const logoutDesc = document.createElement("span");
-    logoutDesc.textContent = "Log out";
-    logoutRow.appendChild(logoutDesc);
-    logoutRow.addEventListener("click", () => logout());
+    logoutRow.className = "menu-row";
+    logoutRow.appendChild(createAction("Log out", null, () => logout()));
     popover.appendChild(logoutRow);
+    const setColor = color => activate(textEl => applyColor(textEl.closest(".item"), color));
+    for (const row of colors) {
+        const rowEl = document.createElement("div");
+        rowEl.className = "menu-colors";
+        for (const [name, color, key] of row) {
+            const swatch = document.createElement("span");
+            swatch.className = color ? `menu-swatch bg-${color}` : "menu-swatch bg-none";
+            swatch.title = `${name} (${key})`;
+            swatch.addEventListener("click", () => setColor(color));
+            rowEl.appendChild(swatch);
+        }
+        popover.appendChild(rowEl);
+    }
     menu.appendChild(popover);
     document.body.appendChild(menu);
     keepMenuVisible(menu);

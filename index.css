@@ -103,11 +103,13 @@ body {
   left: 0;
 }
 
-/* Truncate long bullet texts to keep the popover narrow. */
+/* Truncate long bullet texts to keep the popover narrow. Outdent by
+   the padding so that the text lines up with the popover edge. */
 .breadcrumb-row {
-  margin: 3px 0;
+  margin: 0 -6px;
   max-width: 16rem;
   overflow: hidden;
+  padding: 3px 6px;
   text-overflow: ellipsis;
 }
 
@@ -342,17 +344,19 @@ body {
   right: 0;
 }
 
+/* Push the actions of a row to opposite edges of the popover,
+   outdented so that .menu-action's padding doesn't offset them. */
 .menu-row {
+  align-items: center;
   display: flex;
-  gap: 24px;
+  gap: 12px;
   justify-content: space-between;
-  margin: 3px 0;
+  margin: 0 -6px;
 }
 
 .menu-action {
   border-radius: 6px;
   cursor: pointer;
-  margin: 0 -6px;
   padding: 3px 6px;
 }
 
@@ -360,36 +364,29 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
-.menu-key {
-  opacity: 0.7;
+/* Same vertical padding as .menu-action to keep the row rhythm. */
+.menu-colors {
+  display: flex;
+  gap: 8px;
+  padding: 3px 0;
 }
 
-.menu-key kbd {
-  opacity: 0.7;
-}
-
-.menu-key kbd::before {
-  content: "+";
-  margin: 0 2px;
-}
-
-.menu-key kbd:first-child {
-  margin-left: 0;
-}
-
-.menu-key kbd:first-child::before {
-  content: "";
-  margin: 0;
-}
-
+/* 1lh to match the height of the text rows above. */
 .menu-swatch {
   border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 2px;
-  display: inline-block;
-  height: 0.8em;
-  margin-right: 9px;
-  vertical-align: -2px;
+  border-radius: 6px;
+  cursor: pointer;
+  height: 1lh;
   width: 1.6em;
+}
+
+/* Diagonal line to mark the swatch that clears the color. */
+.menu-swatch.bg-none {
+  background-image: linear-gradient(to top right,
+                                    transparent calc(50% - 1px),
+                                    rgba(255, 255, 255, 0.5) calc(50% - 1px),
+                                    rgba(255, 255, 255, 0.5) calc(50% + 1px),
+                                    transparent calc(50% + 1px));
 }
 
 .menu-swatch.bg-blue   { background-color: var(--color-bg-blue);   }
@@ -398,13 +395,6 @@ body {
 .menu-swatch.bg-red    { background-color: var(--color-bg-red);    }
 .menu-swatch.bg-violet { background-color: var(--color-bg-violet); }
 .menu-swatch.bg-yellow { background-color: var(--color-bg-yellow); }
-
-.menu-separator {
-  border: none;
-  border-top: 1px solid white;
-  margin: 6px 0;
-  opacity: 0.2;
-}
 
 #sync-status {
   bottom: 3rem;

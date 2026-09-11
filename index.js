@@ -335,7 +335,6 @@ function handleDeleteMulti() {
     clearSelection();
     for (const parent of parents)
         updateToggle(parent);
-    if (focusTarget) suppressSelectionClear = true;
     focusAfterRemoval(focusTarget, null);
     save();
 }

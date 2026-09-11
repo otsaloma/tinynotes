@@ -430,39 +430,36 @@ function notify(message) {
     notifyTimeout = setTimeout(() => { toast.style.opacity = "0"; }, 1500);
 }
 
-const urlPattern = /\b[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s]+/g;
-
+// Bare URLs in a bullet become links when the caret leaves it, and
+// stripLinks turns them back into plain text when it returns, so that
+// editing never has to work around the markup.
 function renderLinks(textEl) {
     const text = textEl.textContent;
-    urlPattern.lastIndex = 0;
-    if (!urlPattern.test(text)) return;
-    urlPattern.lastIndex = 0;
+    const matches = [...text.matchAll(/\b[a-zA-Z][a-zA-Z0-9+.-]*:\/\/\S+/g)];
+    if (matches.length === 0) return;
     const frag = document.createDocumentFragment();
-    let lastIndex = 0;
-    let match;
-    while ((match = urlPattern.exec(text)) !== null) {
-        if (match.index > lastIndex) {
-            frag.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
-        }
+    let end = 0;
+    for (const match of matches) {
+        if (match.index > end)
+            frag.appendChild(document.createTextNode(text.slice(end, match.index)));
         const a = document.createElement("a");
         a.href = match[0];
         a.textContent = match[0];
         a.target = "_blank";
         a.rel = "noopener";
         frag.appendChild(a);
-        lastIndex = urlPattern.lastIndex;
+        end = match.index + match[0].length;
     }
-    if (lastIndex < text.length) {
-        frag.appendChild(document.createTextNode(text.slice(lastIndex)));
-    }
-    textEl.innerHTML = "";
-    textEl.appendChild(frag);
+    if (end < text.length)
+        frag.appendChild(document.createTextNode(text.slice(end)));
+    textEl.replaceChildren(frag);
 }
 
+// Assigning the text back to itself collapses the links into a single
+// text node.
 function stripLinks(textEl) {
-    const hasLinks = textEl.querySelector("a");
-    if (!hasLinks) return;
-    textEl.textContent = textEl.textContent;
+    if (textEl.querySelector("a"))
+        textEl.textContent = textEl.textContent;
 }
 
 function renderAllLinks() {

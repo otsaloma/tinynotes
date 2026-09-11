@@ -264,6 +264,15 @@ function handleShiftTabMulti() {
     save();
 }
 
+function toggleCompleteMulti() {
+    checkpoint();
+    // Complete unless everything selected is already complete.
+    const completing = selectedItems.some(it => !it.classList.contains("completed"));
+    for (const root of getSelectionRoots())
+        setCompleted(root, completing);
+    save();
+}
+
 function handleDeleteMulti() {
     checkpoint();
     const selectedSet = new Set(selectedItems);
@@ -834,6 +843,19 @@ function dismissBreadcrumbMenus() {
         el.classList.remove("visible");
 }
 
+// Zooming into a bullet with nothing under it would show an empty
+// page, so give it a child to type into.
+function zoomIntoItem(item) {
+    zoomTo(item.dataset.id);
+    if (hasChildren(item)) return;
+    pushUndo();
+    const child = createItem("");
+    getChildrenEl(item).appendChild(child);
+    updateToggle(item);
+    save();
+    getTextEl(child).focus();
+}
+
 function zoomTo(id) {
     commitTextEdit();
     zoomedId = id === "root" ? null : id;
@@ -1203,6 +1225,19 @@ function performDrop(draggedItem, target) {
 }
 
 function setupEvents() {
+    setupOutlineEvents();
+    setupShortcuts();
+    setupBreadcrumbEvents();
+    setupDragEvents();
+    window.addEventListener("hashchange", () => {
+        const hash = location.hash.slice(1);
+        const id = hash || "root";
+        if ((id === "root" && !zoomedId) || id === zoomedId) return;
+        zoomTo(id);
+    });
+}
+
+function setupOutlineEvents() {
     const outline = document.getElementById("outline");
     outline.addEventListener("keydown", e => {
         // Shift+Arrow for multi-select (works even without text focus)
@@ -1233,11 +1268,7 @@ function setupEvents() {
             }
             if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
-                checkpoint();
-                const completing = selectedItems.some(it => !it.classList.contains("completed"));
-                for (const root of getSelectionRoots())
-                    setCompleted(root, completing);
-                save();
+                toggleCompleteMulti();
                 return;
             }
             // Match both Ctrl+C and Ctrl+Shift+C (copy as text). Stop
@@ -1350,16 +1381,7 @@ function setupEvents() {
                 sel.collapseToEnd();
             }
         } else if (e.target.classList.contains("bullet")) {
-            const item = e.target.closest(".item");
-            zoomTo(item.dataset.id);
-            if (!hasChildren(item)) {
-                pushUndo();
-                const newItem = createItem("");
-                getChildrenEl(item).appendChild(newItem);
-                updateToggle(item);
-                save();
-                getTextEl(newItem).focus();
-            }
+            zoomIntoItem(e.target.closest(".item"));
         }
     });
     outline.addEventListener("paste", e => {
@@ -1370,6 +1392,10 @@ function setupEvents() {
         if (e.inputType === "historyUndo" || e.inputType === "historyRedo")
             e.preventDefault();
     });
+}
+
+// Shortcuts that work regardless of where the caret is.
+function setupShortcuts() {
     document.addEventListener("keydown", e => {
         if ((e.ctrlKey || e.metaKey) && !e.altKey) {
             if (e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
@@ -1408,6 +1434,9 @@ function setupEvents() {
             }
         }
     });
+}
+
+function setupBreadcrumbEvents() {
     const breadcrumbs = document.getElementById("breadcrumbs");
     // Keep the caret in place when clicking around the breadcrumbs.
     breadcrumbs.addEventListener("mousedown", e => {
@@ -1430,6 +1459,11 @@ function setupEvents() {
     document.addEventListener("mousedown", e => {
         if (!e.target.closest(".breadcrumb-menu")) dismissBreadcrumbMenus();
     });
+}
+
+// Dragging a bullet moves it and its subtree, dragging across text
+// selects whole bullets rather than characters.
+function setupDragEvents() {
     const dragIndicator = document.createElement("div");
     dragIndicator.className = "drag-indicator";
     document.body.appendChild(dragIndicator);
@@ -1496,12 +1530,6 @@ function setupEvents() {
             dragDidDrop = true;
         }
         dragState = null;
-    });
-    window.addEventListener("hashchange", () => {
-        const hash = location.hash.slice(1);
-        const id = hash || "root";
-        if ((id === "root" && !zoomedId) || id === zoomedId) return;
-        zoomTo(id);
     });
 }
 

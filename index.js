@@ -19,9 +19,7 @@ let currentVersion = null;
 let dragDidDrop = false;
 let dragState = null;
 let focusedItem = null;
-let focusEntryItemId = null;
-let focusEntryState = null;
-let focusEntryText = null;
+let focusEntry = null;
 let hasUnsyncedChanges = false;
 let isTouchDevice = navigator.maxTouchPoints > 0;
 let redoStack = [];
@@ -192,8 +190,7 @@ function extendSelection(e, delta) {
 }
 
 function handleTabMulti() {
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     const activeText = document.activeElement;
     const cursorPos = activeText && activeText.classList.contains("text") ?
         getCursorPos(activeText) : null;
@@ -223,8 +220,7 @@ function handleTabMulti() {
 }
 
 function handleShiftTabMulti() {
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     const activeText = document.activeElement;
     const cursorPos = activeText && activeText.classList.contains("text") ?
         getCursorPos(activeText) : null;
@@ -269,8 +265,7 @@ function handleShiftTabMulti() {
 }
 
 function handleDeleteMulti() {
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     const selectedSet = new Set(selectedItems);
     const roots = getSelectionRoots();
     const firstRoot = roots[0];
@@ -324,8 +319,7 @@ const COLOR_SHORTCUTS = {
 };
 
 function applyColor(item, color) {
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     const textEl = getTextEl(item);
     for (const c of COLOR_CHOICES)
         textEl.classList.remove(`bg-${c}`);
@@ -346,8 +340,7 @@ function setCompleted(item, completed) {
 }
 
 function toggleComplete(item) {
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     const completing = !item.classList.contains("completed");
     setCompleted(item, completing);
     if (completing) {
@@ -676,24 +669,23 @@ function pushUndo(state) {
     redoStack = [];
 }
 
-function commitTextCheckpoint() {
-    if (!focusEntryState) return false;
-    const item = focusEntryItemId ? getItemEl(focusEntryItemId) : null;
-    const currentText = item ? getTextEl(item).textContent : null;
-    if (currentText !== focusEntryText) {
-        undoStack.push(focusEntryState);
-        if (undoStack.length > UNDO_LIMIT)
-            undoStack.splice(0, undoStack.length - UNDO_LIMIT);
-        redoStack = [];
-        focusEntryState = null;
-        focusEntryText = null;
-        focusEntryItemId = null;
-        return true;
-    }
-    focusEntryState = null;
-    focusEntryText = null;
-    focusEntryItemId = null;
-    return false;
+// End the run of typing that started when the caret entered a bullet,
+// recording the state from before it so that the run undoes as one
+// step. A bullet that has since been removed counts as changed.
+function commitTextEdit() {
+    if (!focusEntry) return;
+    const item = getItemEl(focusEntry.itemId);
+    const text = item ? getTextEl(item).textContent : null;
+    const entry = focusEntry;
+    focusEntry = null;
+    if (text !== entry.text)
+        pushUndo(entry.state);
+}
+
+// Close any run of typing and record the state to undo back to.
+function checkpoint() {
+    commitTextEdit();
+    pushUndo();
 }
 
 function restoreState(state) {
@@ -705,9 +697,7 @@ function restoreState(state) {
     applyZoom();
     renderAllLinks();
     save();
-    focusEntryState = null;
-    focusEntryText = null;
-    focusEntryItemId = null;
+    focusEntry = null;
     if (state.focusId) {
         const item = getItemEl(state.focusId);
         if (item) {
@@ -716,15 +706,17 @@ function restoreState(state) {
             textEl.focus();
             setFocusedItem(item);
             setCursorPos(textEl, state.cursorPos);
-            focusEntryState = captureState();
-            focusEntryText = textEl.textContent;
-            focusEntryItemId = state.focusId;
+            focusEntry = {
+                itemId: state.focusId,
+                text: textEl.textContent,
+                state: captureState(),
+            };
         }
     }
 }
 
 function undo() {
-    commitTextCheckpoint();
+    commitTextEdit();
     if (undoStack.length === 0) return;
     redoStack.push(captureState());
     restoreState(undoStack.pop());
@@ -843,7 +835,7 @@ function dismissBreadcrumbMenus() {
 }
 
 function zoomTo(id) {
-    commitTextCheckpoint();
+    commitTextEdit();
     zoomedId = id === "root" ? null : id;
     applyZoom();
     if (zoomedId) {
@@ -855,8 +847,7 @@ function zoomTo(id) {
 
 function handleEnter(e) {
     e.preventDefault();
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     const textEl = e.target;
     const item = textEl.closest(".item");
     const cursorPos = getCursorPos(textEl);
@@ -913,8 +904,7 @@ function handleDelete(e) {
     const nextItem = visibleItems[visibleItems.indexOf(item) + 1];
     if (!nextItem) return;
     e.preventDefault();
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     const parentItem = getParentItem(item);
     item.remove();
     if (parentItem) updateToggle(parentItem);
@@ -930,8 +920,7 @@ function handleBackspace(e) {
     const sel = window.getSelection();
     if (!sel.isCollapsed) return;
     e.preventDefault();
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     const text = textEl.textContent;
     const childrenEl = getChildrenEl(item);
     if (text === "" && !hasChildren(item)) {
@@ -980,8 +969,7 @@ function handleBackspace(e) {
 }
 
 function indentItem(textEl) {
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     const item = textEl.closest(".item");
     const prevItem = item.previousElementSibling;
     if (!prevItem) return;
@@ -1005,8 +993,7 @@ function handleTab(e) {
 }
 
 function dedentItem(textEl) {
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     const item = textEl.closest(".item");
     const parentItem = getParentItem(item);
     if (!parentItem) return;
@@ -1032,8 +1019,7 @@ function dedentItem(textEl) {
 }
 
 function deleteItem(textEl) {
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     const item = textEl.closest(".item");
     const visibleItems = getVisibleItems();
     const idx = visibleItems.indexOf(item);
@@ -1079,8 +1065,7 @@ function handleArrowDown(e) {
 
 function toggleCollapse(item) {
     if (!hasChildren(item)) return;
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     item.classList.toggle("collapsed");
     updateToggle(item);
     save();
@@ -1106,8 +1091,7 @@ function parseLine(line, indentUnit) {
 
 function handlePaste(e) {
     e.preventDefault();
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     const text = e.clipboardData.getData("text/plain");
     const lines = text.split("\n").filter(l => l.trim() !== "");
     const textEl = e.target;
@@ -1201,8 +1185,7 @@ function hideDropIndicator(indicator) {
 }
 
 function performDrop(draggedItem, target) {
-    commitTextCheckpoint();
-    pushUndo();
+    checkpoint();
     const ref = target.referenceItem;
     if (target.position === "before") {
         ref.parentElement.insertBefore(draggedItem, ref);
@@ -1250,8 +1233,7 @@ function setupEvents() {
             }
             if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
-                commitTextCheckpoint();
-                pushUndo();
+                checkpoint();
                 const completing = selectedItems.some(it => !it.classList.contains("completed"));
                 for (const root of getSelectionRoots())
                     setCompleted(root, completing);
@@ -1334,16 +1316,18 @@ function setupEvents() {
         stripLinks(e.target);
         const item = e.target.closest(".item");
         setFocusedItem(item);
-        focusEntryItemId = item.dataset.id;
-        focusEntryText = e.target.textContent;
-        focusEntryState = captureState();
+        focusEntry = {
+            itemId: item.dataset.id,
+            text: e.target.textContent,
+            state: captureState(),
+        };
     });
     outline.addEventListener("focusout", e => {
         if (!e.target.classList.contains("text")) return;
         const nextTarget = e.relatedTarget;
         if (!nextTarget || !outline.contains(nextTarget))
             setFocusedItem(null);
-        commitTextCheckpoint();
+        commitTextEdit();
         renderLinks(e.target);
     });
     outline.addEventListener("click", e => {

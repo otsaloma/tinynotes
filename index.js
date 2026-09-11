@@ -403,10 +403,20 @@ function itemToText(item, indent) {
     return result;
 }
 
-function copyAsText(item) {
-    const text = itemToText(item, 0);
+function copyAsText(items, verb="Copied") {
+    const text = items.map(item => itemToText(item, 0)).join("");
     navigator.clipboard.writeText(text);
-    notify("Copied 1 bullet");
+    notify(`${verb} ${items.length} ${items.length === 1 ? "bullet" : "bullets"}`);
+}
+
+// Ctrl+Shift+C copies the selection if there is one, else the bullet
+// being edited, and does nothing if the caret is outside the outline.
+function copySelectionOrFocused() {
+    if (selectedItems.length > 0)
+        return copyAsText(getSelectionRoots());
+    const textEl = document.activeElement;
+    if (textEl.classList.contains("text"))
+        copyAsText([textEl.closest(".item")]);
 }
 
 let notifyTimeout;
@@ -1289,18 +1299,12 @@ function setupEvents() {
             if ((e.key === "c" || e.key === "C") && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 e.stopPropagation();
-                const roots = getSelectionRoots();
-                const text = roots.map(it => itemToText(it, 0)).join("");
-                navigator.clipboard.writeText(text);
-                notify(`Copied ${roots.length} bullets`);
+                copyAsText(getSelectionRoots());
                 return;
             }
             if (e.key === "x" && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
-                const roots = getSelectionRoots();
-                const text = roots.map(it => itemToText(it, 0)).join("");
-                navigator.clipboard.writeText(text);
-                notify(`Cut ${roots.length} bullets`);
+                copyAsText(getSelectionRoots(), "Cut");
                 handleDeleteMulti();
                 return;
             }
@@ -1423,16 +1427,7 @@ function setupEvents() {
             if ((e.key === "z" && e.shiftKey) || e.key === "y") { e.preventDefault(); redo(); return; }
             if (e.key === "C" && e.shiftKey) {
                 e.preventDefault();
-                if (selectedItems.length > 0) {
-                    const roots = getSelectionRoots();
-                    const text = roots.map(it => itemToText(it, 0)).join("");
-                    navigator.clipboard.writeText(text);
-                    notify(`Copied ${roots.length} bullets`);
-                } else {
-                    const focused = document.activeElement;
-                    if (focused && focused.classList.contains("text"))
-                        copyAsText(focused.closest(".item"));
-                }
+                copySelectionOrFocused();
                 return;
             }
         }
@@ -1701,16 +1696,7 @@ function createMenu() {
             ["Delete", `${ctrl}+Shift+Backspace`, textEl => deleteItem(textEl)],
         ],
         [
-            ["Copy as text", `${ctrl}+Shift+C`, textEl => {
-                if (selectedItems.length > 0) {
-                    const roots = getSelectionRoots();
-                    const text = roots.map(it => itemToText(it, 0)).join("");
-                    navigator.clipboard.writeText(text);
-                    notify(`Copied ${roots.length} bullets`);
-                } else {
-                    copyAsText(textEl.closest(".item"));
-                }
-            }],
+            ["Copy as text", `${ctrl}+Shift+C`, () => copySelectionOrFocused()],
         ],
     ];
     const colors = [

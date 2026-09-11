@@ -93,6 +93,10 @@ function getOutlineEl() {
     return document.getElementById("outline");
 }
 
+function getDragIndicatorEl() {
+    return document.getElementById("drag-indicator");
+}
+
 function getItemEl(id) {
     return document.querySelector(`.item[data-id="${id}"]`);
 }
@@ -1164,7 +1168,8 @@ function findDropTarget(y) {
     return null;
 }
 
-function showDropIndicator(indicator, target) {
+function showDropIndicator(target) {
+    const indicator = getDragIndicatorEl();
     const row = target.referenceItem.querySelector(":scope > .row");
     const rect = row.getBoundingClientRect();
     let top;
@@ -1188,8 +1193,8 @@ function showDropIndicator(indicator, target) {
     indicator.style.display = "block";
 }
 
-function hideDropIndicator(indicator) {
-    indicator.style.display = "none";
+function hideDropIndicator() {
+    getDragIndicatorEl().style.display = "none";
 }
 
 function performDrop(draggedItem, target) {
@@ -1437,72 +1442,74 @@ function setupBreadcrumbEvents() {
     });
 }
 
-// Dragging a bullet moves it and its subtree, dragging across text
-// selects whole bullets rather than characters.
 function setupDragEvents() {
-    const dragIndicator = document.createElement("div");
-    dragIndicator.className = "drag-indicator";
-    document.body.appendChild(dragIndicator);
-    document.addEventListener("mousemove", e => {
-        if (textDragState) {
-            const el = document.elementFromPoint(e.clientX, e.clientY);
-            const currentItem = el && el.closest(".item");
-            if (!currentItem) return;
-            if (!textDragState.active && currentItem !== textDragState.startItem) {
-                window.getSelection().removeAllRanges();
-                document.body.style.userSelect = "none";
-                textDragState.active = true;
-            }
-            if (textDragState.active) {
-                const visibleItems = getVisibleItems();
-                const a = visibleItems.indexOf(textDragState.startItem);
-                const b = visibleItems.indexOf(currentItem);
-                if (a === -1 || b === -1) return;
-                const range = visibleItems.slice(Math.min(a, b), Math.max(a, b) + 1);
-                setSelection(range);
-                selectionAnchor = textDragState.startItem;
-            }
-            return;
-        }
-        if (!dragState) return;
+    document.addEventListener("mousemove", handleDragMove);
+    document.addEventListener("mouseup", handleDragEnd);
+}
+
+// Dragging across text selects whole bullets rather than characters.
+function handleTextDragMove(e) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const currentItem = el && el.closest(".item");
+    if (!currentItem) return;
+    if (!textDragState.active && currentItem !== textDragState.startItem) {
+        window.getSelection().removeAllRanges();
+        document.body.style.userSelect = "none";
+        textDragState.active = true;
+    }
+    if (!textDragState.active) return;
+    const visibleItems = getVisibleItems();
+    const a = visibleItems.indexOf(textDragState.startItem);
+    const b = visibleItems.indexOf(currentItem);
+    if (a === -1 || b === -1) return;
+    setSelection(visibleItems.slice(Math.min(a, b), Math.max(a, b) + 1));
+    selectionAnchor = textDragState.startItem;
+}
+
+// Dragging a bullet moves it and its subtree. The drag starts only
+// once the pointer has moved a little, so that a click still zooms.
+function handleItemDragMove(e) {
+    if (!dragState.isDragging) {
         const dx = e.clientX - dragState.startX;
         const dy = e.clientY - dragState.startY;
-        if (!dragState.isDragging) {
-            if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
-            dragState.isDragging = true;
-            dragState.item.classList.add("dragging");
-            document.body.style.cursor = "grabbing";
-            document.body.style.userSelect = "none";
-        }
-        const target = findDropTarget(e.clientY);
-        if (target) {
-            showDropIndicator(dragIndicator, target);
-        } else {
-            hideDropIndicator(dragIndicator);
-        }
-    });
-    document.addEventListener("mouseup", e => {
-        if (textDragState) {
-            if (textDragState.active) {
-                document.body.style.userSelect = "";
-                dragDidDrop = true;
-            }
-            textDragState = null;
-            return;
-        }
-        if (!dragState) return;
-        if (dragState.isDragging) {
-            e.preventDefault();
-            dragState.item.classList.remove("dragging");
-            document.body.style.cursor = "";
+        if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+        dragState.isDragging = true;
+        dragState.item.classList.add("dragging");
+        document.body.style.cursor = "grabbing";
+        document.body.style.userSelect = "none";
+    }
+    const target = findDropTarget(e.clientY);
+    if (target) showDropIndicator(target);
+    else hideDropIndicator();
+}
+
+function handleDragMove(e) {
+    if (textDragState) handleTextDragMove(e);
+    else if (dragState) handleItemDragMove(e);
+}
+
+// Either drag ends by marking dragDidDrop, so that the click closing
+// it is not taken for a click on the bullet underneath.
+function handleDragEnd(e) {
+    if (textDragState) {
+        if (textDragState.active) {
             document.body.style.userSelect = "";
-            hideDropIndicator(dragIndicator);
-            const target = findDropTarget(e.clientY);
-            if (target) performDrop(dragState.item, target);
             dragDidDrop = true;
         }
-        dragState = null;
-    });
+        textDragState = null;
+        return;
+    }
+    if (dragState && dragState.isDragging) {
+        e.preventDefault();
+        dragState.item.classList.remove("dragging");
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        hideDropIndicator();
+        const target = findDropTarget(e.clientY);
+        if (target) performDrop(dragState.item, target);
+        dragDidDrop = true;
+    }
+    dragState = null;
 }
 
 function getRedirectUri() {
@@ -1721,6 +1728,9 @@ function buildLayout() {
     const outline = document.createElement("div");
     outline.id = "outline";
     document.body.appendChild(outline);
+    const dragIndicator = document.createElement("div");
+    dragIndicator.id = "drag-indicator";
+    document.body.appendChild(dragIndicator);
     return outline;
 }
 

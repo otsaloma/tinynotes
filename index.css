@@ -189,7 +189,7 @@ body {
   opacity: 0.3;
 }
 
-.drag-indicator {
+#drag-indicator {
   background-color: var(--color-selection);
   display: none;
   height: 2px;
@@ -199,7 +199,7 @@ body {
   z-index: 100;
 }
 
-.drag-indicator::before {
+#drag-indicator::before {
   background-color: var(--color-selection);
   border-radius: 50%;
   content: "";

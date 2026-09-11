@@ -9,6 +9,17 @@ const ACCOUNT = new URLSearchParams(location.search).get("u") || "1";
 const DEMO = new URLSearchParams(location.search).has("demo");
 
 const BULLET = "\u2022";
+// Name, class suffix and Alt shortcut of each highlight colour. The
+// menu shows them as swatches in two rows, clearing last.
+const COLORS = [
+    ["Yellow", "yellow", "y"],
+    ["Orange", "orange", "o"],
+    ["Red", "red", "r"],
+    ["Violet", "violet", "v"],
+    ["Blue", "blue", "b"],
+    ["Green", "green", "g"],
+    ["Clear", null, "c"],
+];
 const FOLD_COLLAPSED = "⋯";
 const FOLD_OPEN = "⋮";
 const NBSP = "\u00a0";
@@ -320,22 +331,11 @@ function handleDeleteMulti() {
     save();
 }
 
-const COLOR_CHOICES = ["yellow", "orange", "red", "violet", "blue", "green"];
-
-const COLOR_SHORTCUTS = {
-    "y": "yellow",
-    "o": "orange",
-    "r": "red",
-    "v": "violet",
-    "b": "blue",
-    "g": "green",
-};
-
 function applyColor(item, color) {
     checkpoint();
     const textEl = getTextEl(item);
-    for (const c of COLOR_CHOICES)
-        textEl.classList.remove(`bg-${c}`);
+    for (const cls of [...textEl.classList])
+        if (cls.startsWith("bg-")) textEl.classList.remove(cls);
     if (color) {
         item.dataset.color = color;
         textEl.classList.add(`bg-${color}`);
@@ -1418,17 +1418,14 @@ function setupShortcuts() {
         }
         if (e.altKey && !e.ctrlKey && !e.metaKey) {
             const key = e.key.toLowerCase();
+            const match = COLORS.find(([, , shortcut]) => shortcut === key);
             const textEl = getFocusedText();
-            if (key === "c" && textEl) {
-                e.preventDefault();
-                applyColor(textEl.closest(".item"), null);
-                return;
-            }
-            if (COLOR_SHORTCUTS[key] && textEl) {
+            if (match && textEl) {
                 e.preventDefault();
                 const item = textEl.closest(".item");
-                const current = COLOR_SHORTCUTS[key];
-                applyColor(item, item.dataset.color === current ? null : current);
+                const color = match[1];
+                // Repeating the shortcut of the current colour clears it.
+                applyColor(item, item.dataset.color === color ? null : color);
             }
         }
     });
@@ -1674,19 +1671,6 @@ function createMenu() {
             ["Copy as text", `${ctrl}+Shift+C`, () => copySelectionOrFocused()],
         ],
     ];
-    const colors = [
-        [
-            ["Yellow", "yellow", `${alt}+Y`],
-            ["Orange", "orange", `${alt}+O`],
-            ["Red", "red", `${alt}+R`],
-            ["Violet", "violet", `${alt}+V`],
-        ],
-        [
-            ["Blue", "blue", `${alt}+B`],
-            ["Green", "green", `${alt}+G`],
-            ["Clear", null, `${alt}+C`],
-        ],
-    ];
     const menu = document.createElement("div");
     menu.id = "menu";
     const syncStatus = document.createElement("span");
@@ -1724,13 +1708,13 @@ function createMenu() {
     logoutRow.appendChild(createAction("Log out", null, () => logout()));
     popover.appendChild(logoutRow);
     const setColor = color => activate(textEl => applyColor(textEl.closest(".item"), color));
-    for (const row of colors) {
+    for (const row of [COLORS.slice(0, 4), COLORS.slice(4)]) {
         const rowEl = document.createElement("div");
         rowEl.className = "menu-colors";
-        for (const [name, color, key] of row) {
+        for (const [name, color, shortcut] of row) {
             const swatch = document.createElement("span");
             swatch.className = color ? `menu-swatch bg-${color}` : "menu-swatch bg-none";
-            swatch.title = `${name} (${key})`;
+            swatch.title = `${name} (${alt}+${shortcut.toUpperCase()})`;
             swatch.addEventListener("click", () => setColor(color));
             rowEl.appendChild(swatch);
         }

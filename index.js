@@ -1097,6 +1097,7 @@ function parseLine(line, indentUnit) {
 }
 
 function handlePaste(e) {
+    if (!e.target.classList.contains("text")) return;
     e.preventDefault();
     checkpoint();
     const text = e.clipboardData.getData("text/plain");
@@ -1224,158 +1225,157 @@ function setupEvents() {
 
 function setupOutlineEvents() {
     const outline = getOutlineEl();
-    outline.addEventListener("keydown", e => {
-        // Shift+Arrow for multi-select (works even without text focus)
-        if (e.key === "ArrowDown" && e.shiftKey) {
-            extendSelection(e, 1);
-            return;
-        }
-        if (e.key === "ArrowUp" && e.shiftKey) {
-            extendSelection(e, -1);
-            return;
-        }
-        // Multi-select batch operations
-        if (selectedItems.length > 0) {
-            if (e.key === "Tab" && !e.shiftKey) {
-                e.preventDefault();
-                handleTabMulti();
-                return;
-            }
-            if (e.key === "Tab" && e.shiftKey) {
-                e.preventDefault();
-                handleShiftTabMulti();
-                return;
-            }
-            if (e.key === "Backspace" || e.key === "Delete") {
-                e.preventDefault();
-                handleDeleteMulti();
-                return;
-            }
-            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                toggleCompleteMulti();
-                return;
-            }
-            // Match both Ctrl+C and Ctrl+Shift+C (copy as text). Stop
-            // propagation so the document-level Ctrl+Shift+C handler
-            // doesn't copy and notify a second time.
-            if ((e.key === "c" || e.key === "C") && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                e.stopPropagation();
-                copyAsText(getSelectionRoots());
-                return;
-            }
-            if (e.key === "x" && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                copyAsText(getSelectionRoots(), "Cut");
-                handleDeleteMulti();
-                return;
-            }
-            // Modifier keys alone don't clear selection
-            if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return;
-            // Any other key clears selection and falls through
-            clearSelection();
-        }
-        // Single-item handlers
-        if (!e.target.classList.contains("text")) return;
-        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            const item = e.target.closest(".item");
-            toggleComplete(item);
-            return;
-        }
-        if (e.key === "Enter") {
-            handleEnter(e);
-        } else if (e.key === "Backspace" && e.shiftKey && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            deleteItem(e.target);
-        } else if (e.key === "Backspace") {
-            handleBackspace(e);
-        } else if (e.key === "Delete") {
-            handleDelete(e);
-        } else if (e.key === "Tab" && !e.shiftKey) {
-            e.preventDefault();
-            indentItem(e.target);
-        } else if (e.key === "Tab" && e.shiftKey) {
-            e.preventDefault();
-            dedentItem(e.target);
-        } else if (e.key === "ArrowUp") {
-            handleArrowUp(e);
-        } else if (e.key === "ArrowDown") {
-            handleArrowDown(e);
-        }
-    });
-    outline.addEventListener("input", e => {
-        if (!e.target.classList.contains("text")) return;
-        if (zoomedId) applyZoom();
-        save();
-    });
-    outline.addEventListener("mousedown", e => {
-        if (e.target.tagName === "A" && e.target.closest(".text")) {
-            e.preventDefault();
-            e.stopPropagation();
-            window.open(e.target.href, "_blank", "noopener");
-            return;
-        }
-        if (e.target.classList.contains("bullet") && e.button === 0) {
-            const item = e.target.closest(".item");
-            dragState = { item, startX: e.clientX, startY: e.clientY, isDragging: false };
-        } else if (e.target.classList.contains("text") && e.button === 0) {
-            textDragState = { startItem: e.target.closest(".item"), active: false };
-        }
-    });
-    outline.addEventListener("focusin", e => {
-        if (!e.target.classList.contains("text")) return;
-        if (suppressSelectionClear) {
-            suppressSelectionClear = false;
-        } else if (selectedItems.length > 0) {
-            clearSelection();
-        }
-        stripLinks(e.target);
+    outline.addEventListener("beforeinput", handleBeforeInput);
+    outline.addEventListener("click", handleClick);
+    outline.addEventListener("focusin", handleFocusIn);
+    outline.addEventListener("focusout", handleFocusOut);
+    outline.addEventListener("input", handleInput);
+    outline.addEventListener("keydown", handleKeyDown);
+    outline.addEventListener("mousedown", handleMouseDown);
+    outline.addEventListener("paste", handlePaste);
+}
+
+function handleKeyDown(e) {
+    // Shift+Arrow selects whole bullets, with or without text focus.
+    if (e.key === "ArrowDown" && e.shiftKey) return extendSelection(e, 1);
+    if (e.key === "ArrowUp" && e.shiftKey) return extendSelection(e, -1);
+    if (selectedItems.length > 0) {
+        if (handleSelectionKey(e)) return;
+        // Modifier keys alone don't drop the selection, anything else
+        // drops it and then acts on the bullet being edited.
+        if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
+        clearSelection();
+    }
+    if (e.target.classList.contains("text"))
+        handleTextKey(e);
+}
+
+// Keys acting on the whole selection, returning whether it was one.
+function handleSelectionKey(e) {
+    if (e.key === "Tab" && !e.shiftKey) {
+        e.preventDefault();
+        handleTabMulti();
+    } else if (e.key === "Tab" && e.shiftKey) {
+        e.preventDefault();
+        handleShiftTabMulti();
+    } else if (e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        handleDeleteMulti();
+    } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        toggleCompleteMulti();
+    } else if ((e.key === "c" || e.key === "C") && (e.ctrlKey || e.metaKey)) {
+        // Match both Ctrl+C and Ctrl+Shift+C. Stop propagation so that
+        // the document-level Ctrl+Shift+C doesn't copy a second time.
+        e.preventDefault();
+        e.stopPropagation();
+        copyAsText(getSelectionRoots());
+    } else if (e.key === "x" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        copyAsText(getSelectionRoots(), "Cut");
+        handleDeleteMulti();
+    } else {
+        return false;
+    }
+    return true;
+}
+
+// Keys acting on the bullet being edited.
+function handleTextKey(e) {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        toggleComplete(e.target.closest(".item"));
+    } else if (e.key === "Enter") {
+        handleEnter(e);
+    } else if (e.key === "Backspace" && e.shiftKey && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        deleteItem(e.target);
+    } else if (e.key === "Backspace") {
+        handleBackspace(e);
+    } else if (e.key === "Delete") {
+        handleDelete(e);
+    } else if (e.key === "Tab" && !e.shiftKey) {
+        e.preventDefault();
+        indentItem(e.target);
+    } else if (e.key === "Tab" && e.shiftKey) {
+        e.preventDefault();
+        dedentItem(e.target);
+    } else if (e.key === "ArrowUp") {
+        handleArrowUp(e);
+    } else if (e.key === "ArrowDown") {
+        handleArrowDown(e);
+    }
+}
+
+function handleInput(e) {
+    if (!e.target.classList.contains("text")) return;
+    // The zoomed bullet's text doubles as the page title.
+    if (zoomedId) applyZoom();
+    save();
+}
+
+// The browser's own undo would fight ours.
+function handleBeforeInput(e) {
+    if (e.inputType === "historyUndo" || e.inputType === "historyRedo")
+        e.preventDefault();
+}
+
+function handleFocusIn(e) {
+    if (!e.target.classList.contains("text")) return;
+    if (suppressSelectionClear) {
+        suppressSelectionClear = false;
+    } else if (selectedItems.length > 0) {
+        clearSelection();
+    }
+    stripLinks(e.target);
+    const item = e.target.closest(".item");
+    setFocusedItem(item);
+    focusEntry = {
+        itemId: item.dataset.id,
+        text: e.target.textContent,
+        state: captureState(),
+    };
+}
+
+function handleFocusOut(e) {
+    if (!e.target.classList.contains("text")) return;
+    // Keep the bullet marked while focus moves within the outline.
+    if (!e.relatedTarget || !getOutlineEl().contains(e.relatedTarget))
+        setFocusedItem(null);
+    commitTextEdit();
+    renderLinks(e.target);
+}
+
+function handleMouseDown(e) {
+    if (e.target.tagName === "A" && e.target.closest(".text")) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.open(e.target.href, "_blank", "noopener");
+    } else if (e.target.classList.contains("bullet") && e.button === 0) {
         const item = e.target.closest(".item");
-        setFocusedItem(item);
-        focusEntry = {
-            itemId: item.dataset.id,
-            text: e.target.textContent,
-            state: captureState(),
-        };
-    });
-    outline.addEventListener("focusout", e => {
-        if (!e.target.classList.contains("text")) return;
-        const nextTarget = e.relatedTarget;
-        if (!nextTarget || !outline.contains(nextTarget))
-            setFocusedItem(null);
-        commitTextEdit();
-        renderLinks(e.target);
-    });
-    outline.addEventListener("click", e => {
-        if (dragDidDrop) {
-            dragDidDrop = false;
-            return;
-        }
-        if (selectedItems.length > 0) {
-            clearSelection();
-        }
-        if (e.target.classList.contains("toggle")) {
-            const item = e.target.closest(".item");
-            toggleCollapse(item);
-        } else if (e.target.classList.contains("row")) {
-            // Clicking beside the text puts the caret at the end of
-            // it, unless a text selection is being made.
-            if (window.getSelection().isCollapsed)
-                focusItemEnd(e.target.closest(".item"));
-        } else if (e.target.classList.contains("bullet")) {
-            zoomIntoItem(e.target.closest(".item"));
-        }
-    });
-    outline.addEventListener("paste", e => {
-        if (!e.target.classList.contains("text")) return;
-        handlePaste(e);
-    });
-    outline.addEventListener("beforeinput", e => {
-        if (e.inputType === "historyUndo" || e.inputType === "historyRedo")
-            e.preventDefault();
-    });
+        dragState = { item, startX: e.clientX, startY: e.clientY, isDragging: false };
+    } else if (e.target.classList.contains("text") && e.button === 0) {
+        textDragState = { startItem: e.target.closest(".item"), active: false };
+    }
+}
+
+function handleClick(e) {
+    if (dragDidDrop) {
+        dragDidDrop = false;
+        return;
+    }
+    if (selectedItems.length > 0)
+        clearSelection();
+    if (e.target.classList.contains("toggle")) {
+        toggleCollapse(e.target.closest(".item"));
+    } else if (e.target.classList.contains("row")) {
+        // Clicking beside the text puts the caret at the end of it,
+        // unless a text selection is being made.
+        if (window.getSelection().isCollapsed)
+            focusItemEnd(e.target.closest(".item"));
+    } else if (e.target.classList.contains("bullet")) {
+        zoomIntoItem(e.target.closest(".item"));
+    }
 }
 
 // Shortcuts that work regardless of where the caret is.

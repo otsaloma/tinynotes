@@ -4,32 +4,32 @@
 const API_URL = "https://q3yno9wuoi.execute-api.eu-north-1.amazonaws.com";
 const COGNITO_CLIENT_ID = "30j2jbt002e8c3sh053sq6oa3i";
 const COGNITO_DOMAIN = "eu-north-1fmmzfb35t.auth.eu-north-1.amazoncognito.com";
+
 const ACCOUNT = new URLSearchParams(location.search).get("u") || "1";
 const DEMO = new URLSearchParams(location.search).has("demo");
 
+const BULLET = "\u2022";
+const FOLD_COLLAPSED = "⋯";
+const FOLD_OPEN = "⋮";
+const NBSP = "\u00a0";
 const SYNC_DEBOUNCE_MS = 3000;
 const UNDO_LIMIT = 100;
-
-const BULLET = "\u2022";
-const NBSP = "\u00a0";
-const TRIANGLE_DOWN = "⋮";
-const TRIANGLE_RIGHT = "⋯";
 
 let currentVersion = null;
 let dragDidDrop = false;
 let dragState = null;
-let textDragState = null;
+let focusedItem = null;
 let focusEntryItemId = null;
 let focusEntryState = null;
 let focusEntryText = null;
-let focusedItem = null;
+let hasUnsyncedChanges = false;
 let isTouchDevice = navigator.maxTouchPoints > 0;
 let redoStack = [];
 let selectedItems = [];
 let selectionAnchor = null;
 let suppressSelectionClear = false;
-let hasUnsyncedChanges = false;
 let syncTimeout = null;
+let textDragState = null;
 let undoStack = [];
 let zoomedId = null;
 
@@ -130,7 +130,7 @@ function getVisibleItems() {
 function updateToggle(item) {
     const toggle = item.querySelector(":scope > .row > .toggle");
     if (hasChildren(item)) {
-        toggle.textContent = item.classList.contains("collapsed") ? TRIANGLE_RIGHT : TRIANGLE_DOWN;
+        toggle.textContent = item.classList.contains("collapsed") ? FOLD_COLLAPSED : FOLD_OPEN;
     } else {
         toggle.textContent = NBSP;
     }

@@ -159,88 +159,36 @@ function groupRootsByParent(roots) {
     return groups;
 }
 
-function handleShiftArrowDown(e) {
+// Shift+Arrow grows or shrinks a contiguous selection of visible
+// items. The anchor end stays put, the head end moves by one and the
+// selection spans the two. Shrinking to a single item drops the
+// selection and puts the caret back into that item.
+function extendSelection(e, delta) {
     e.preventDefault();
-    const textEl = document.activeElement;
-    const item = textEl.closest ? textEl.closest(".item") : null;
+    const item = document.activeElement.closest(".item");
     if (!item) return;
     const visibleItems = getVisibleItems();
-
-    if (selectedItems.length === 0) {
-        const idx = visibleItems.indexOf(item);
-        if (idx >= 0 && idx < visibleItems.length - 1) {
-            selectionAnchor = item;
-            setSelection([item, visibleItems[idx + 1]]);
-            window.getSelection().removeAllRanges();
-        }
-    } else {
-        const anchorIdx = visibleItems.indexOf(selectionAnchor);
-        const lastSelected = selectedItems[selectedItems.length - 1];
-        const firstSelected = selectedItems[0];
-        const lastIdx = visibleItems.indexOf(lastSelected);
-        const firstIdx = visibleItems.indexOf(firstSelected);
-
-        if (anchorIdx === firstIdx) {
-            // Extending downward
-            if (lastIdx < visibleItems.length - 1) {
-                setSelection(visibleItems.slice(firstIdx, lastIdx + 2));
-                selectionAnchor = firstSelected;
-                window.getSelection().removeAllRanges();
-            }
-        } else {
-            // Contracting from top
-            if (selectedItems.length > 2) {
-                setSelection(visibleItems.slice(firstIdx + 1, lastIdx + 1));
-                selectionAnchor = lastSelected;
-                window.getSelection().removeAllRanges();
-            } else {
-                clearSelection();
-                focusItemEnd(visibleItems[firstIdx + 1]);
-            }
-        }
+    let anchorIdx = visibleItems.indexOf(item);
+    let headIdx = anchorIdx;
+    if (selectedItems.length > 0) {
+        anchorIdx = visibleItems.indexOf(selectionAnchor);
+        const firstIdx = visibleItems.indexOf(selectedItems[0]);
+        const lastIdx = visibleItems.indexOf(selectedItems[selectedItems.length - 1]);
+        headIdx = anchorIdx === firstIdx ? lastIdx : firstIdx;
     }
-}
-
-function handleShiftArrowUp(e) {
-    e.preventDefault();
-    const textEl = document.activeElement;
-    const item = textEl.closest ? textEl.closest(".item") : null;
-    if (!item) return;
-    const visibleItems = getVisibleItems();
-
-    if (selectedItems.length === 0) {
-        const idx = visibleItems.indexOf(item);
-        if (idx > 0) {
-            selectionAnchor = item;
-            setSelection([visibleItems[idx - 1], item]);
-            window.getSelection().removeAllRanges();
-        }
-    } else {
-        const anchorIdx = visibleItems.indexOf(selectionAnchor);
-        const lastSelected = selectedItems[selectedItems.length - 1];
-        const firstSelected = selectedItems[0];
-        const lastIdx = visibleItems.indexOf(lastSelected);
-        const firstIdx = visibleItems.indexOf(firstSelected);
-
-        if (anchorIdx === lastIdx) {
-            // Extending upward
-            if (firstIdx > 0) {
-                setSelection(visibleItems.slice(firstIdx - 1, lastIdx + 1));
-                selectionAnchor = lastSelected;
-                window.getSelection().removeAllRanges();
-            }
-        } else {
-            // Contracting from bottom
-            if (selectedItems.length > 2) {
-                setSelection(visibleItems.slice(firstIdx, lastIdx));
-                selectionAnchor = firstSelected;
-                window.getSelection().removeAllRanges();
-            } else {
-                clearSelection();
-                focusItemEnd(visibleItems[lastIdx - 1]);
-            }
-        }
+    headIdx += delta;
+    if (anchorIdx < 0 || headIdx < 0 || headIdx >= visibleItems.length) return;
+    const anchor = visibleItems[anchorIdx];
+    const start = Math.min(anchorIdx, headIdx);
+    const end = Math.max(anchorIdx, headIdx);
+    if (start === end) {
+        clearSelection();
+        focusItemEnd(anchor);
+        return;
     }
+    setSelection(visibleItems.slice(start, end + 1));
+    selectionAnchor = anchor;
+    window.getSelection().removeAllRanges();
 }
 
 function handleTabMulti() {
@@ -1290,11 +1238,11 @@ function setupEvents() {
     outline.addEventListener("keydown", e => {
         // Shift+Arrow for multi-select (works even without text focus)
         if (e.key === "ArrowDown" && e.shiftKey) {
-            handleShiftArrowDown(e);
+            extendSelection(e, 1);
             return;
         }
         if (e.key === "ArrowUp" && e.shiftKey) {
-            handleShiftArrowUp(e);
+            extendSelection(e, -1);
             return;
         }
         // Multi-select batch operations

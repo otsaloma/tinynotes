@@ -750,58 +750,44 @@ function redo() {
     notify("Redo");
 }
 
+// Bullets may be empty, breadcrumbs and titles may not be blank.
+function getItemLabel(item) {
+    return getTextEl(item).textContent || "(empty)";
+}
+
+function hideSiblings(item) {
+    for (const sibling of item.parentElement.children)
+        if (sibling !== item) sibling.classList.add("zoom-hidden");
+}
+
+// Show only the zoomed item, its subtree and the path down to it.
 function applyZoom() {
     const outline = getOutlineEl();
-    const els = outline.querySelectorAll(".zoom-root, .zoom-ancestor, .zoom-hidden");
-    for (const el of els)
+    for (const el of outline.querySelectorAll(".zoom-root, .zoom-ancestor, .zoom-hidden"))
         el.classList.remove("zoom-root", "zoom-ancestor", "zoom-hidden");
-    const zoomTitle = document.getElementById("zoom-title");
-    zoomTitle.textContent = "";
-    if (!zoomedId) {
-        // At home everything is visible, no need for dropdowns.
-        renderBreadcrumbs([{ id: "root", text: "Home" }], false);
-        return;
-    }
-    const target = getItemEl(zoomedId);
-    if (!target) {
-        zoomedId = null;
-        applyZoom();
-        return;
-    }
-    target.classList.add("zoom-root");
-    // Hide siblings of zoom-root
-    const rootParent = target.parentElement;
-    for (const sibling of rootParent.children) {
-        if (sibling !== target && sibling.classList.contains("item")) {
-            sibling.classList.add("zoom-hidden");
+    // The item zoomed to can be gone, undone or deleted on the way.
+    const target = zoomedId ? getItemEl(zoomedId) : null;
+    if (!target) zoomedId = null;
+    if (target) {
+        target.classList.add("zoom-root");
+        hideSiblings(target);
+        for (let node = getParentItem(target); node; node = getParentItem(node)) {
+            node.classList.add("zoom-ancestor");
+            hideSiblings(node);
         }
     }
-    // Walk up ancestors
-    let ancestor = getParentItem(target);
-    while (ancestor) {
-        ancestor.classList.add("zoom-ancestor");
-        const parent = ancestor.parentElement;
-        for (const sibling of parent.children) {
-            if (sibling !== ancestor && sibling.classList.contains("item")) {
-                sibling.classList.add("zoom-hidden");
-            }
-        }
-        ancestor = getParentItem(ancestor);
-    }
-    // Build breadcrumb (hierarchy above zoomed item only)
-    const crumbs = [{ id: "root", text: "Home" }];
-    let node = getParentItem(target);
-    const ancestorCrumbs = [];
-    while (node) {
-        const text = getTextEl(node).textContent || "(empty)";
-        ancestorCrumbs.push({ id: node.dataset.id, text: text });
-        node = getParentItem(node);
-    }
-    ancestorCrumbs.reverse();
-    crumbs.push(...ancestorCrumbs);
-    renderBreadcrumbs(crumbs, true);
-    // Show zoomed item text as title
-    zoomTitle.textContent = getTextEl(target).textContent || "(empty)";
+    renderHeader(target);
+}
+
+// Breadcrumbs lead down to the zoomed item, whose own text becomes the
+// title. At home everything is visible, so there are no dropdowns.
+function renderHeader(target) {
+    document.getElementById("zoom-title").textContent = target ? getItemLabel(target) : "";
+    const crumbs = [];
+    for (let node = target && getParentItem(target); node; node = getParentItem(node))
+        crumbs.unshift({ id: node.dataset.id, text: getItemLabel(node) });
+    crumbs.unshift({ id: "root", text: "Home" });
+    renderBreadcrumbs(crumbs, Boolean(target));
 }
 
 function renderBreadcrumbs(crumbs, menus) {
@@ -836,7 +822,7 @@ function createBreadcrumbMenu(id) {
         const row = document.createElement("div");
         row.className = "breadcrumb-row menu-action";
         row.dataset.id = child.dataset.id;
-        row.textContent = getTextEl(child).textContent || "(empty)";
+        row.textContent = getItemLabel(child);
         popover.appendChild(row);
     }
     if (children.length > 10) {

@@ -307,19 +307,8 @@ function handleDeleteMulti() {
     clearSelection();
     for (const parent of parents)
         updateToggle(parent);
-    // Handle empty outline
-    const outline = document.getElementById("outline");
-    if (!outline.querySelector(".item")) {
-        const newItem = createItem("");
-        outline.appendChild(newItem);
-        getTextEl(newItem).focus();
-        save();
-        return;
-    }
-    if (focusTarget) {
-        suppressSelectionClear = true;
-        focusItemEnd(focusTarget);
-    }
+    if (focusTarget) suppressSelectionClear = true;
+    focusAfterRemoval(focusTarget, null);
     save();
 }
 
@@ -504,6 +493,22 @@ function focusItemEnd(item) {
     const textEl = getTextEl(item);
     textEl.focus();
     setCursorPos(textEl, textEl.textContent.length);
+}
+
+// Put the caret where removed items were: at the end of what was above
+// them, or failing that at the start of what was below. The outline
+// must never be left empty, there would be nothing to type into.
+function focusAfterRemoval(prevItem, nextItem) {
+    const outline = document.getElementById("outline");
+    if (!outline.querySelector(".item")) {
+        const item = createItem("");
+        outline.appendChild(item);
+        getTextEl(item).focus();
+    } else if (prevItem) {
+        focusItemEnd(prevItem);
+    } else if (nextItem) {
+        focusItemStart(nextItem);
+    }
 }
 
 function serialize(container) {
@@ -937,20 +942,7 @@ function handleBackspace(e) {
         const parentItem = getParentItem(item);
         item.remove();
         if (parentItem) updateToggle(parentItem);
-        // If outline is now empty, create a starter bullet
-        const outline = document.getElementById("outline");
-        if (!outline.querySelector(".item")) {
-            const newItem = createItem("");
-            outline.appendChild(newItem);
-            getTextEl(newItem).focus();
-            save();
-            return;
-        }
-        if (prevItem) {
-            focusItemEnd(prevItem);
-        } else if (nextItem) {
-            focusItemStart(nextItem);
-        }
+        focusAfterRemoval(prevItem, nextItem);
     } else if (text === "" && hasChildren(item)) {
         const parentContainer = item.parentElement;
         const parentItem = getParentItem(item);
@@ -1050,16 +1042,7 @@ function deleteItem(textEl) {
     const parentItem = getParentItem(item);
     item.remove();
     if (parentItem) updateToggle(parentItem);
-    const outline = document.getElementById("outline");
-    if (!outline.querySelector(".item")) {
-        const newItem = createItem("");
-        outline.appendChild(newItem);
-        getTextEl(newItem).focus();
-    } else if (prevItem) {
-        focusItemEnd(prevItem);
-    } else if (nextItem) {
-        focusItemStart(nextItem);
-    }
+    focusAfterRemoval(prevItem, nextItem);
     save();
 }
 

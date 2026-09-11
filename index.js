@@ -98,26 +98,11 @@ function hasChildren(item) {
     return getChildrenEl(item).querySelector(":scope > .item") !== null;
 }
 
-function getPrevItem(item) {
-    let prev = item.previousElementSibling;
-    while (prev && !prev.classList.contains("item"))
-        prev = prev.previousElementSibling;
-    return prev;
-}
-
-function getNextItem(item) {
-    let next = item.nextElementSibling;
-    while (next && !next.classList.contains("item"))
-        next = next.nextElementSibling;
-    return next;
-}
-
+// Items live either in #outline or in the .children div of their
+// parent, so the parent is the item owning that div, if any. Siblings
+// are for the same reason always items, use *ElementSibling directly.
 function getParentItem(item) {
-    let parent = item.parentElement;
-    if (!parent) return null;
-    parent = parent.parentElement;
-    if (!parent || !parent.classList.contains("item")) return null;
-    return parent;
+    return item.parentElement.closest(".item");
 }
 
 // Items in document order, skipping those collapsed or zoomed out of
@@ -268,9 +253,9 @@ function handleTabMulti() {
     const roots = getSelectionRoots();
     const groups = groupRootsByParent(roots);
     for (const group of groups) {
-        let target = getPrevItem(group.roots[0]);
+        let target = group.roots[0].previousElementSibling;
         while (target && selectedSet.has(target))
-            target = getPrevItem(target);
+            target = target.previousElementSibling;
         if (!target) continue;
         if (target.classList.contains("collapsed"))
             target.classList.remove("collapsed");
@@ -307,11 +292,11 @@ function handleShiftTabMulti() {
         const grandparentContainer = parentItem.parentElement;
         // Gather following non-selected siblings after last root
         const followingSiblings = [];
-        let sibling = getNextItem(lastRoot);
+        let sibling = lastRoot.nextElementSibling;
         while (sibling) {
             if (!selectedSet.has(sibling))
                 followingSiblings.push(sibling);
-            sibling = getNextItem(sibling);
+            sibling = sibling.nextElementSibling;
         }
         // Move following siblings into last root's children
         const lastChildrenEl = getChildrenEl(lastRoot);
@@ -431,9 +416,8 @@ function toggleComplete(item) {
         }
     }
     if (completing) {
-        const nextSibling = item.nextElementSibling;
-        if (nextSibling && nextSibling.classList.contains("item"))
-            getTextEl(nextSibling).focus();
+        const nextItem = item.nextElementSibling;
+        if (nextItem) getTextEl(nextItem).focus();
     }
     save();
 }
@@ -1056,7 +1040,7 @@ function indentItem(textEl) {
     commitTextCheckpoint();
     pushUndo();
     const item = textEl.closest(".item");
-    const prevItem = getPrevItem(item);
+    const prevItem = item.previousElementSibling;
     if (!prevItem) return;
     const cursorPos = getCursorPos(textEl);
     const prevChildrenEl = getChildrenEl(prevItem);
@@ -1088,10 +1072,10 @@ function dedentItem(textEl) {
     const grandparentContainer = parentItem.parentElement;
     // Move following siblings into this item's children
     const nextSiblings = [];
-    let sibling = getNextItem(item);
+    let sibling = item.nextElementSibling;
     while (sibling) {
         nextSiblings.push(sibling);
-        sibling = getNextItem(sibling);
+        sibling = sibling.nextElementSibling;
     }
     const childrenEl = getChildrenEl(item);
     for (const s of nextSiblings)

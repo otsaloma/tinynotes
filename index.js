@@ -1729,7 +1729,8 @@ function keepMenuVisible(menu) {
     trackViewport();
 }
 
-async function main() {
+// The page ships empty, everything below #menu is built here.
+function buildLayout() {
     createMenu();
     const header = document.createElement("div");
     header.id = "header";
@@ -1743,7 +1744,25 @@ async function main() {
     const outline = document.createElement("div");
     outline.id = "outline";
     document.body.appendChild(outline);
+    return outline;
+}
+
+// Demo mode gets one empty bullet to play with and neither contacts
+// the sync server nor touches local storage, here or anywhere else.
+function startDemo() {
+    const outline = buildLayout();
+    const item = createItem("");
+    outline.appendChild(item);
+    applyZoom();
+    setupEvents();
+    getTextEl(item).focus();
+}
+
+async function start() {
+    const outline = buildLayout();
     const remote = await fetchFromRemote();
+    // Leave the outline empty and uneditable rather than risk syncing
+    // stale notes over newer ones we failed to read.
     if (!remote) return;
     if (remote.items && remote.items.length > 0) {
         deserialize(remote.items, outline);
@@ -1767,24 +1786,7 @@ async function main() {
 
 (async function() {
     if (DEMO) {
-        createMenu();
-        const header = document.createElement("div");
-        header.id = "header";
-        const breadcrumbs = document.createElement("div");
-        breadcrumbs.id = "breadcrumbs";
-        header.appendChild(breadcrumbs);
-        const zoomTitle = document.createElement("h1");
-        zoomTitle.id = "zoom-title";
-        header.appendChild(zoomTitle);
-        document.body.appendChild(header);
-        const outline = document.createElement("div");
-        outline.id = "outline";
-        document.body.appendChild(outline);
-        const item = createItem("");
-        outline.appendChild(item);
-        applyZoom();
-        setupEvents();
-        getTextEl(item).focus();
+        startDemo();
         return;
     }
     const spinner = document.createElement("div");
@@ -1793,7 +1795,7 @@ async function main() {
     document.body.appendChild(spinner);
     await handleAuthCallback();
     if (await isAuthenticated()) {
-        await main();
+        await start();
         spinner.remove();
     } else {
         spinner.remove();

@@ -349,20 +349,18 @@ function applyColor(item, color) {
     save();
 }
 
+// Completion covers the whole subtree, a bullet with something left
+// undone under it is not done.
+function setCompleted(item, completed) {
+    for (const el of [item, ...item.querySelectorAll(".item")])
+        el.classList.toggle("completed", completed);
+}
+
 function toggleComplete(item) {
     commitTextCheckpoint();
     pushUndo();
     const completing = !item.classList.contains("completed");
-    const items = [item, ...item.querySelectorAll(".item")];
-    for (const it of items) {
-        if (completing) {
-            it.classList.add("completed");
-            it.dataset.completed = "true";
-        } else {
-            it.classList.remove("completed");
-            delete it.dataset.completed;
-        }
-    }
+    setCompleted(item, completing);
     if (completing) {
         const nextItem = item.nextElementSibling;
         if (nextItem) getTextEl(nextItem).focus();
@@ -375,10 +373,8 @@ function copyItemProperties(from, to) {
         to.dataset.color = from.dataset.color;
         getTextEl(to).classList.add(`bg-${from.dataset.color}`);
     }
-    if (from.classList.contains("completed")) {
+    if (from.classList.contains("completed"))
         to.classList.add("completed");
-        to.dataset.completed = "true";
-    }
     if (from.classList.contains("collapsed"))
         to.classList.add("collapsed");
 }
@@ -389,7 +385,6 @@ function clearItemProperties(item) {
         delete item.dataset.color;
     }
     item.classList.remove("completed");
-    delete item.dataset.completed;
     item.classList.remove("collapsed");
 }
 
@@ -536,10 +531,8 @@ function deserialize(items, container) {
         if (data.collapsed) {
             item.classList.add("collapsed");
         }
-        if (data.completed) {
+        if (data.completed)
             item.classList.add("completed");
-            item.dataset.completed = "true";
-        }
         container.appendChild(item);
         if (data.children && data.children.length > 0) {
             deserialize(data.children, getChildrenEl(item));
@@ -1277,19 +1270,8 @@ function setupEvents() {
                 commitTextCheckpoint();
                 pushUndo();
                 const completing = selectedItems.some(it => !it.classList.contains("completed"));
-                const roots = getSelectionRoots();
-                for (const root of roots) {
-                    const items = [root, ...root.querySelectorAll(".item")];
-                    for (const desc of items) {
-                        if (completing) {
-                            desc.classList.add("completed");
-                            desc.dataset.completed = "true";
-                        } else {
-                            desc.classList.remove("completed");
-                            delete desc.dataset.completed;
-                        }
-                    }
-                }
+                for (const root of getSelectionRoots())
+                    setCompleted(root, completing);
                 save();
                 return;
             }

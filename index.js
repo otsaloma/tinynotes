@@ -84,6 +84,12 @@ function getChildrenEl(item) {
     return item.querySelector(":scope > .children");
 }
 
+// The text being edited, or null if the caret is elsewhere.
+function getFocusedText() {
+    const el = document.activeElement;
+    return el.classList.contains("text") ? el : null;
+}
+
 function setFocusedItem(item) {
     if (focusedItem)
         focusedItem.classList.remove("focused");
@@ -191,9 +197,8 @@ function extendSelection(e, delta) {
 
 function handleTabMulti() {
     checkpoint();
-    const activeText = document.activeElement;
-    const cursorPos = activeText && activeText.classList.contains("text") ?
-        getCursorPos(activeText) : null;
+    const activeText = getFocusedText();
+    const cursorPos = activeText ? getCursorPos(activeText) : null;
     const selectedSet = new Set(selectedItems);
     const roots = getSelectionRoots();
     const groups = groupRootsByParent(roots);
@@ -221,9 +226,8 @@ function handleTabMulti() {
 
 function handleShiftTabMulti() {
     checkpoint();
-    const activeText = document.activeElement;
-    const cursorPos = activeText && activeText.classList.contains("text") ?
-        getCursorPos(activeText) : null;
+    const activeText = getFocusedText();
+    const cursorPos = activeText ? getCursorPos(activeText) : null;
     const selectedSet = new Set(selectedItems);
     const roots = getSelectionRoots();
     const groups = groupRootsByParent(roots);
@@ -400,9 +404,8 @@ function copyAsText(items, verb="Copied") {
 function copySelectionOrFocused() {
     if (selectedItems.length > 0)
         return copyAsText(getSelectionRoots());
-    const textEl = document.activeElement;
-    if (textEl.classList.contains("text"))
-        copyAsText([textEl.closest(".item")]);
+    const textEl = getFocusedText();
+    if (textEl) copyAsText([textEl.closest(".item")]);
 }
 
 let notifyTimeout;
@@ -663,10 +666,10 @@ function captureState() {
         focusId: null,
         cursorPos: 0,
     };
-    const focused = document.activeElement;
-    if (focused && focused.classList.contains("text")) {
-        state.focusId = focused.closest(".item").dataset.id;
-        state.cursorPos = getCursorPos(focused);
+    const textEl = getFocusedText();
+    if (textEl) {
+        state.focusId = textEl.closest(".item").dataset.id;
+        state.cursorPos = getCursorPos(textEl);
     }
     return state;
 }
@@ -1415,22 +1418,17 @@ function setupShortcuts() {
         }
         if (e.altKey && !e.ctrlKey && !e.metaKey) {
             const key = e.key.toLowerCase();
-            if (key === "c") {
-                const focused = document.activeElement;
-                if (focused && focused.classList.contains("text")) {
-                    e.preventDefault();
-                    applyColor(focused.closest(".item"), null);
-                }
+            const textEl = getFocusedText();
+            if (key === "c" && textEl) {
+                e.preventDefault();
+                applyColor(textEl.closest(".item"), null);
                 return;
             }
-            if (COLOR_SHORTCUTS[key]) {
-                const focused = document.activeElement;
-                if (focused && focused.classList.contains("text")) {
-                    e.preventDefault();
-                    const item = focused.closest(".item");
-                    const current = COLOR_SHORTCUTS[key];
-                    applyColor(item, item.dataset.color === current ? null : current);
-                }
+            if (COLOR_SHORTCUTS[key] && textEl) {
+                e.preventDefault();
+                const item = textEl.closest(".item");
+                const current = COLOR_SHORTCUTS[key];
+                applyColor(item, item.dataset.color === current ? null : current);
             }
         }
     });
@@ -1709,10 +1707,10 @@ function createMenu() {
     });
     // Only act on the item being edited, dropping the click if focus is elsewhere.
     const activate = action => {
-        const active = document.activeElement;
-        if (!active || !active.classList.contains("text")) return;
+        const textEl = getFocusedText();
+        if (!textEl) return;
         dismissPopover();
-        action(active);
+        action(textEl);
     };
     for (const row of rows) {
         const rowEl = document.createElement("div");

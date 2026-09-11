@@ -42,6 +42,10 @@ let textDragState = null;
 let undoStack = [];
 let zoomedId = null;
 
+function storageKey(name, account=ACCOUNT) {
+    return `tinynotes_u${account}_${name}`;
+}
+
 function listAllIds() {
     return Array.from(document.querySelectorAll(".item[data-id]")).map(el => el.dataset.id);
 }
@@ -81,6 +85,10 @@ function createItem(text, color) {
     children.className = "children";
     item.appendChild(children);
     return item;
+}
+
+function getOutlineEl() {
+    return document.getElementById("outline");
 }
 
 function getItemEl(id) {
@@ -504,7 +512,7 @@ function focusItemEnd(item) {
 // them, or failing that at the start of what was below. The outline
 // must never be left empty, there would be nothing to type into.
 function focusAfterRemoval(prevItem, nextItem) {
-    const outline = document.getElementById("outline");
+    const outline = getOutlineEl();
     if (!outline.querySelector(".item")) {
         const item = createItem("");
         outline.appendChild(item);
@@ -551,20 +559,24 @@ function deserialize(items, container) {
     }
 }
 
+// Local storage holds the last state known to have reached the sync
+// server. Nothing reads it back, notes always come from the server.
+function writeCache(items) {
+    localStorage.setItem(storageKey("notes"), JSON.stringify({
+        zoomedId: zoomedId,
+        items: items,
+    }));
+}
+
 function save() {
     if (DEMO) return;
-    const outline = document.getElementById("outline");
-    const data = {
-        zoomedId: zoomedId,
-        items: serialize(outline),
-    };
-    localStorage.setItem(storageKey("notes"), JSON.stringify(data));
+    writeCache(serialize(getOutlineEl()));
     hasUnsyncedChanges = true;
     updateSyncStatus("pending");
     debouncedSync();
 }
 
-function updateSyncStatus(state, status) {
+function updateSyncStatus(state, httpStatus) {
     const el = document.getElementById("sync-status");
     if (!el) return;
     el.classList.remove("sync-error");
@@ -578,7 +590,7 @@ function updateSyncStatus(state, status) {
     } else if (state === "pending") {
         el.textContent = "sync pending";
     } else if (state === "error") {
-        el.textContent = `sync error ${status}`;
+        el.textContent = `sync error ${httpStatus}`;
         el.classList.add("sync-error");
     } else if (state === "conflict") {
         el.textContent = "sync conflict";
@@ -592,8 +604,7 @@ async function syncToRemote(retry) {
         hasUnsyncedChanges = false;
         return;
     }
-    const outline = document.getElementById("outline");
-    const items = serialize(outline);
+    const items = serialize(getOutlineEl());
     updateSyncStatus("syncing");
     try {
         const response = await fetch(`${API_URL}/notes`, {
@@ -604,10 +615,7 @@ async function syncToRemote(retry) {
         if (response.ok) {
             const data = await response.json();
             currentVersion = data.version;
-            localStorage.setItem(storageKey("notes"), JSON.stringify({
-                zoomedId: zoomedId,
-                items: items,
-            }));
+            writeCache(items);
             hasUnsyncedChanges = false;
             updateSyncStatus("synced");
         } else if (response.status === 409) {
@@ -625,7 +633,7 @@ async function syncToRemote(retry) {
 }
 
 function debouncedSync() {
-    if (syncTimeout) clearTimeout(syncTimeout);
+    clearTimeout(syncTimeout);
     syncTimeout = setTimeout(() => syncToRemote(), SYNC_DEBOUNCE_MS);
 }
 
@@ -659,7 +667,7 @@ async function fetchFromRemote(retry) {
 }
 
 function captureState() {
-    const outline = document.getElementById("outline");
+    const outline = getOutlineEl();
     const state = {
         items: serialize(outline),
         zoomedId: zoomedId,
@@ -701,7 +709,7 @@ function checkpoint() {
 }
 
 function restoreState(state) {
-    const outline = document.getElementById("outline");
+    const outline = getOutlineEl();
     outline.innerHTML = "";
     deserialize(state.items, outline);
     setFocusedItem(null);
@@ -743,7 +751,7 @@ function redo() {
 }
 
 function applyZoom() {
-    const outline = document.getElementById("outline");
+    const outline = getOutlineEl();
     const els = outline.querySelectorAll(".zoom-root, .zoom-ancestor, .zoom-hidden");
     for (const el of els)
         el.classList.remove("zoom-root", "zoom-ancestor", "zoom-hidden");
@@ -813,7 +821,7 @@ function renderBreadcrumbs(crumbs, menus) {
 // Dropdown listing the direct children of a breadcrumb, allowing to
 // zoom to a sibling of the item currently zoomed to.
 function createBreadcrumbMenu(id) {
-    const parent = id === "root" ? document.getElementById("outline") : getChildrenEl(getItemEl(id));
+    const parent = id === "root" ? getOutlineEl() : getChildrenEl(getItemEl(id));
     const children = Array.from(parent.querySelectorAll(":scope > .item"));
     if (children.length === 0) return null;
     const menu = document.createElement("span");
@@ -1241,7 +1249,7 @@ function setupEvents() {
 }
 
 function setupOutlineEvents() {
-    const outline = document.getElementById("outline");
+    const outline = getOutlineEl();
     outline.addEventListener("keydown", e => {
         // Shift+Arrow for multi-select (works even without text focus)
         if (e.key === "ArrowDown" && e.shiftKey) {
@@ -1528,10 +1536,6 @@ function setupDragEvents() {
     });
 }
 
-function storageKey(name) {
-    return `tinynotes_u${ACCOUNT}_${name}`;
-}
-
 function getRedirectUri() {
     return location.origin + location.pathname;
 }
@@ -1572,10 +1576,9 @@ async function handleAuthCallback() {
         body: body,
     });
     const tokens = await response.json();
-    const key = name => `tinynotes_u${account}_${name}`;
-    localStorage.setItem(key("id_token"), tokens.id_token);
-    localStorage.setItem(key("access_token"), tokens.access_token);
-    localStorage.setItem(key("refresh_token"), tokens.refresh_token);
+    localStorage.setItem(storageKey("id_token", account), tokens.id_token);
+    localStorage.setItem(storageKey("access_token", account), tokens.access_token);
+    localStorage.setItem(storageKey("refresh_token", account), tokens.refresh_token);
     const redirect = account === "1" ? location.pathname : `${location.pathname}?u=${account}`;
     window.history.replaceState({}, document.title, redirect);
 }
@@ -1780,10 +1783,7 @@ async function start() {
         const item = createItem("");
         outline.appendChild(item);
     }
-    localStorage.setItem(storageKey("notes"), JSON.stringify({
-        zoomedId: null,
-        items: remote.items,
-    }));
+    writeCache(remote.items);
     const hash = location.hash.slice(1);
     if (hash && getItemEl(hash)) zoomedId = hash;
     applyZoom();

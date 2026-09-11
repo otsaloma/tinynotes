@@ -120,9 +120,12 @@ function getParentItem(item) {
     return parent;
 }
 
+// Items in document order, skipping those collapsed or zoomed out of
+// view. Visibility is decided by the text, as the rows of the zoom root
+// and its ancestors are hidden while the items themselves are not.
 function getVisibleItems() {
-    const allTexts = document.querySelectorAll("#outline .text");
-    return Array.from(allTexts).filter(t => t.checkVisibility());
+    const items = document.querySelectorAll("#outline .item");
+    return Array.from(items).filter(item => getTextEl(item).checkVisibility());
 }
 
 function updateToggle(item) {
@@ -147,10 +150,6 @@ function setSelection(items) {
     selectedItems = items;
     for (const item of items)
         item.classList.add("selected");
-}
-
-function getVisibleItemList() {
-    return getVisibleItems().map(t => t.closest(".item"));
 }
 
 function getSelectionRoots() {
@@ -180,40 +179,38 @@ function handleShiftArrowDown(e) {
     const textEl = document.activeElement;
     const item = textEl.closest ? textEl.closest(".item") : null;
     if (!item) return;
-    const visible = getVisibleItemList();
+    const visibleItems = getVisibleItems();
 
     if (selectedItems.length === 0) {
-        const idx = visible.indexOf(item);
-        if (idx >= 0 && idx < visible.length - 1) {
+        const idx = visibleItems.indexOf(item);
+        if (idx >= 0 && idx < visibleItems.length - 1) {
             selectionAnchor = item;
-            setSelection([item, visible[idx + 1]]);
+            setSelection([item, visibleItems[idx + 1]]);
             window.getSelection().removeAllRanges();
         }
     } else {
-        const anchorIdx = visible.indexOf(selectionAnchor);
+        const anchorIdx = visibleItems.indexOf(selectionAnchor);
         const lastSelected = selectedItems[selectedItems.length - 1];
         const firstSelected = selectedItems[0];
-        const lastIdx = visible.indexOf(lastSelected);
-        const firstIdx = visible.indexOf(firstSelected);
+        const lastIdx = visibleItems.indexOf(lastSelected);
+        const firstIdx = visibleItems.indexOf(firstSelected);
 
         if (anchorIdx === firstIdx) {
             // Extending downward
-            if (lastIdx < visible.length - 1) {
-                setSelection(visible.slice(firstIdx, lastIdx + 2));
+            if (lastIdx < visibleItems.length - 1) {
+                setSelection(visibleItems.slice(firstIdx, lastIdx + 2));
                 selectionAnchor = firstSelected;
                 window.getSelection().removeAllRanges();
             }
         } else {
             // Contracting from top
             if (selectedItems.length > 2) {
-                setSelection(visible.slice(firstIdx + 1, lastIdx + 1));
+                setSelection(visibleItems.slice(firstIdx + 1, lastIdx + 1));
                 selectionAnchor = lastSelected;
                 window.getSelection().removeAllRanges();
             } else {
                 clearSelection();
-                const textToFocus = getTextEl(visible[firstIdx + 1]);
-                textToFocus.focus();
-                setCursorPos(textToFocus, textToFocus.textContent.length);
+                focusItemEnd(visibleItems[firstIdx + 1]);
             }
         }
     }
@@ -224,40 +221,38 @@ function handleShiftArrowUp(e) {
     const textEl = document.activeElement;
     const item = textEl.closest ? textEl.closest(".item") : null;
     if (!item) return;
-    const visible = getVisibleItemList();
+    const visibleItems = getVisibleItems();
 
     if (selectedItems.length === 0) {
-        const idx = visible.indexOf(item);
+        const idx = visibleItems.indexOf(item);
         if (idx > 0) {
             selectionAnchor = item;
-            setSelection([visible[idx - 1], item]);
+            setSelection([visibleItems[idx - 1], item]);
             window.getSelection().removeAllRanges();
         }
     } else {
-        const anchorIdx = visible.indexOf(selectionAnchor);
+        const anchorIdx = visibleItems.indexOf(selectionAnchor);
         const lastSelected = selectedItems[selectedItems.length - 1];
         const firstSelected = selectedItems[0];
-        const lastIdx = visible.indexOf(lastSelected);
-        const firstIdx = visible.indexOf(firstSelected);
+        const lastIdx = visibleItems.indexOf(lastSelected);
+        const firstIdx = visibleItems.indexOf(firstSelected);
 
         if (anchorIdx === lastIdx) {
             // Extending upward
             if (firstIdx > 0) {
-                setSelection(visible.slice(firstIdx - 1, lastIdx + 1));
+                setSelection(visibleItems.slice(firstIdx - 1, lastIdx + 1));
                 selectionAnchor = lastSelected;
                 window.getSelection().removeAllRanges();
             }
         } else {
             // Contracting from bottom
             if (selectedItems.length > 2) {
-                setSelection(visible.slice(firstIdx, lastIdx));
+                setSelection(visibleItems.slice(firstIdx, lastIdx));
                 selectionAnchor = firstSelected;
                 window.getSelection().removeAllRanges();
             } else {
                 clearSelection();
-                const textToFocus = getTextEl(visible[lastIdx - 1]);
-                textToFocus.focus();
-                setCursorPos(textToFocus, textToFocus.textContent.length);
+                focusItemEnd(visibleItems[lastIdx - 1]);
             }
         }
     }
@@ -348,20 +343,20 @@ function handleDeleteMulti() {
     const firstRoot = roots[0];
     const lastRoot = roots[roots.length - 1];
     // Find focus target in visible document order
-    const visible = getVisibleItemList();
-    const firstIdx = visible.indexOf(firstRoot);
-    const lastIdx = visible.indexOf(lastRoot);
+    const visibleItems = getVisibleItems();
+    const firstIdx = visibleItems.indexOf(firstRoot);
+    const lastIdx = visibleItems.indexOf(lastRoot);
     let focusTarget = null;
     for (let i = firstIdx - 1; i >= 0; i--) {
-        if (!selectedSet.has(visible[i])) {
-            focusTarget = visible[i];
+        if (!selectedSet.has(visibleItems[i])) {
+            focusTarget = visibleItems[i];
             break;
         }
     }
     if (!focusTarget) {
-        for (let i = lastIdx + 1; i < visible.length; i++) {
-            if (!selectedSet.has(visible[i])) {
-                focusTarget = visible[i];
+        for (let i = lastIdx + 1; i < visibleItems.length; i++) {
+            if (!selectedSet.has(visibleItems[i])) {
+                focusTarget = visibleItems[i];
                 break;
             }
         }
@@ -390,9 +385,7 @@ function handleDeleteMulti() {
     }
     if (focusTarget) {
         suppressSelectionClear = true;
-        const textEl = getTextEl(focusTarget);
-        textEl.focus();
-        setCursorPos(textEl, textEl.textContent.length);
+        focusItemEnd(focusTarget);
     }
     save();
 }
@@ -562,6 +555,18 @@ function setCursorPos(el, pos) {
     range.collapse(true);
     sel.removeAllRanges();
     sel.addRange(range);
+}
+
+function focusItemStart(item) {
+    const textEl = getTextEl(item);
+    textEl.focus();
+    setCursorPos(textEl, 0);
+}
+
+function focusItemEnd(item) {
+    const textEl = getTextEl(item);
+    textEl.focus();
+    setCursorPos(textEl, textEl.textContent.length);
 }
 
 function serialize(container) {
@@ -965,17 +970,15 @@ function handleDelete(e) {
     if (!sel.isCollapsed) return;
     if (text !== "" || hasChildren(item)) return;
     const visibleItems = getVisibleItems();
-    const idx = visibleItems.indexOf(textEl);
-    const nextTextEl = idx < visibleItems.length - 1 ? visibleItems[idx + 1] : null;
-    if (!nextTextEl) return;
+    const nextItem = visibleItems[visibleItems.indexOf(item) + 1];
+    if (!nextItem) return;
     e.preventDefault();
     commitTextCheckpoint();
     pushUndo();
     const parentItem = getParentItem(item);
     item.remove();
     if (parentItem) updateToggle(parentItem);
-    nextTextEl.focus();
-    setCursorPos(nextTextEl, 0);
+    focusItemStart(nextItem);
     save();
 }
 
@@ -993,8 +996,9 @@ function handleBackspace(e) {
     const childrenEl = getChildrenEl(item);
     if (text === "" && !hasChildren(item)) {
         const visibleItems = getVisibleItems();
-        const idx = visibleItems.indexOf(textEl);
-        const prevTextEl = idx > 0 ? visibleItems[idx - 1] : null;
+        const idx = visibleItems.indexOf(item);
+        const prevItem = visibleItems[idx - 1];
+        const nextItem = visibleItems[idx + 1];
         const parentItem = getParentItem(item);
         item.remove();
         if (parentItem) updateToggle(parentItem);
@@ -1007,13 +1011,10 @@ function handleBackspace(e) {
             save();
             return;
         }
-        const nextTextEl = idx < visibleItems.length - 1 ? visibleItems[idx + 1] : null;
-        if (prevTextEl) {
-            prevTextEl.focus();
-            setCursorPos(prevTextEl, prevTextEl.textContent.length);
-        } else if (nextTextEl) {
-            nextTextEl.focus();
-            setCursorPos(nextTextEl, 0);
+        if (prevItem) {
+            focusItemEnd(prevItem);
+        } else if (nextItem) {
+            focusItemStart(nextItem);
         }
     } else if (text === "" && hasChildren(item)) {
         const parentContainer = item.parentElement;
@@ -1021,23 +1022,20 @@ function handleBackspace(e) {
         const nextSibling = item.nextSibling;
         const visibleItems = getVisibleItems();
         const children = Array.from(childrenEl.querySelectorAll(":scope > .item"));
-        const firstChildText = children.length > 0 ? getTextEl(children[0]) : null;
-        const idx = firstChildText ? visibleItems.indexOf(firstChildText) : -1;
-        const prevTextEl = idx > 0 ? visibleItems[idx - 1] : null;
+        // The first child is not among the visible items if collapsed.
+        const idx = visibleItems.indexOf(children[0]);
+        const prevItem = idx > 0 ? visibleItems[idx - 1] : null;
         for (const child of children)
             parentContainer.insertBefore(child, nextSibling);
         item.remove();
         if (parentItem) updateToggle(parentItem);
-        if (prevTextEl) {
-            prevTextEl.focus();
-            setCursorPos(prevTextEl, prevTextEl.textContent.length);
-        }
+        if (prevItem) focusItemEnd(prevItem);
     } else {
         const visibleItems = getVisibleItems();
-        const idx = visibleItems.indexOf(textEl);
+        const idx = visibleItems.indexOf(item);
         if (idx <= 0) return;
-        const prevTextEl = visibleItems[idx - 1];
-        const prevItem = prevTextEl.closest(".item");
+        const prevItem = visibleItems[idx - 1];
+        const prevTextEl = getTextEl(prevItem);
         const prevLen = prevTextEl.textContent.length;
         prevTextEl.textContent += text;
         const children = Array.from(childrenEl.querySelectorAll(":scope > .item"));
@@ -1111,8 +1109,9 @@ function deleteItem(textEl) {
     pushUndo();
     const item = textEl.closest(".item");
     const visibleItems = getVisibleItems();
-    const idx = visibleItems.indexOf(textEl);
-    const prevTextEl = idx > 0 ? visibleItems[idx - 1] : null;
+    const idx = visibleItems.indexOf(item);
+    const prevItem = visibleItems[idx - 1];
+    const nextItem = visibleItems[idx + 1];
     const parentItem = getParentItem(item);
     item.remove();
     if (parentItem) updateToggle(parentItem);
@@ -1121,15 +1120,10 @@ function deleteItem(textEl) {
         const newItem = createItem("");
         outline.appendChild(newItem);
         getTextEl(newItem).focus();
-    } else if (prevTextEl) {
-        prevTextEl.focus();
-        setCursorPos(prevTextEl, prevTextEl.textContent.length);
-    } else {
-        const nextTextEl = idx < visibleItems.length - 1 ? visibleItems[idx + 1] : null;
-        if (nextTextEl) {
-            nextTextEl.focus();
-            setCursorPos(nextTextEl, 0);
-        }
+    } else if (prevItem) {
+        focusItemEnd(prevItem);
+    } else if (nextItem) {
+        focusItemStart(nextItem);
     }
     save();
 }
@@ -1144,9 +1138,9 @@ function handleArrowUp(e) {
     const textEl = e.target;
     const cursorPos = getCursorPos(textEl);
     const visibleItems = getVisibleItems();
-    const idx = visibleItems.indexOf(textEl);
+    const idx = visibleItems.indexOf(textEl.closest(".item"));
     if (idx > 0) {
-        const prevTextEl = visibleItems[idx - 1];
+        const prevTextEl = getTextEl(visibleItems[idx - 1]);
         prevTextEl.focus();
         setCursorPos(prevTextEl, Math.min(cursorPos, prevTextEl.textContent.length));
     }
@@ -1157,9 +1151,9 @@ function handleArrowDown(e) {
     const textEl = e.target;
     const cursorPos = getCursorPos(textEl);
     const visibleItems = getVisibleItems();
-    const idx = visibleItems.indexOf(textEl);
+    const idx = visibleItems.indexOf(textEl.closest(".item"));
     if (idx < visibleItems.length - 1) {
-        const nextTextEl = visibleItems[idx + 1];
+        const nextTextEl = getTextEl(visibleItems[idx + 1]);
         nextTextEl.focus();
         setCursorPos(nextTextEl, Math.min(cursorPos, nextTextEl.textContent.length));
     }
@@ -1243,9 +1237,7 @@ function handlePaste(e) {
 }
 
 function findDropTarget(y) {
-    const visibleItems = getVisibleItems();
-    for (const textEl of visibleItems) {
-        const item = textEl.closest(".item");
+    for (const item of getVisibleItems()) {
         if (item === dragState.item || dragState.item.contains(item)) continue;
         const row = item.querySelector(":scope > .row");
         const rect = row.getBoundingClientRect();
@@ -1576,11 +1568,11 @@ function setupEvents() {
                 textDragState.active = true;
             }
             if (textDragState.active) {
-                const visible = getVisibleItemList();
-                const a = visible.indexOf(textDragState.startItem);
-                const b = visible.indexOf(currentItem);
+                const visibleItems = getVisibleItems();
+                const a = visibleItems.indexOf(textDragState.startItem);
+                const b = visibleItems.indexOf(currentItem);
                 if (a === -1 || b === -1) return;
-                const range = visible.slice(Math.min(a, b), Math.max(a, b) + 1);
+                const range = visibleItems.slice(Math.min(a, b), Math.max(a, b) + 1);
                 setSelection(range);
                 selectionAnchor = textDragState.startItem;
             }
@@ -1903,7 +1895,7 @@ async function main() {
     setupEvents();
     const visibleItems = getVisibleItems();
     if (visibleItems.length > 0 && !isTouchDevice)
-        visibleItems[0].focus();
+        getTextEl(visibleItems[0]).focus();
 }
 
 (async function() {

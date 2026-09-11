@@ -44,8 +44,54 @@ let textDragState = null;
 let undoStack = [];
 let zoomedId = null;
 
-function storageKey(name, account=ACCOUNT) {
-    return `tinynotes_u${account}_${name}`;
+function getOutlineEl() {
+    return document.getElementById("outline");
+}
+
+function getDragIndicatorEl() {
+    return document.getElementById("drag-indicator");
+}
+
+function getItemEl(id) {
+    return document.querySelector(`.item[data-id="${id}"]`);
+}
+
+function getTextEl(item) {
+    return item.querySelector(":scope > .row > .text");
+}
+
+function getChildrenEl(item) {
+    return item.querySelector(":scope > .children");
+}
+
+// The text being edited, or null if the caret is elsewhere.
+function getFocusedText() {
+    const el = document.activeElement;
+    return el.classList.contains("text") ? el : null;
+}
+
+// Items live either in #outline or in the .children div of their
+// parent, so the parent is the item owning that div, if any. Siblings
+// are for the same reason always items, use *ElementSibling directly.
+function getParentItem(item) {
+    return item.parentElement.closest(".item");
+}
+
+function hasChildren(item) {
+    return getChildrenEl(item).querySelector(":scope > .item") !== null;
+}
+
+// Items in document order, skipping those collapsed or zoomed out of
+// view. Visibility is decided by the text, as the rows of the zoom root
+// and its ancestors are hidden while the items themselves are not.
+function getVisibleItems() {
+    const items = document.querySelectorAll("#outline .item");
+    return Array.from(items).filter(item => getTextEl(item).checkVisibility());
+}
+
+// Bullets may be empty, breadcrumbs and titles may not be blank.
+function getItemLabel(item) {
+    return getTextEl(item).textContent || "(empty)";
 }
 
 function listAllIds() {
@@ -89,30 +135,14 @@ function createItem(text, color) {
     return item;
 }
 
-function getOutlineEl() {
-    return document.getElementById("outline");
-}
-
-function getDragIndicatorEl() {
-    return document.getElementById("drag-indicator");
-}
-
-function getItemEl(id) {
-    return document.querySelector(`.item[data-id="${id}"]`);
-}
-
-function getTextEl(item) {
-    return item.querySelector(":scope > .row > .text");
-}
-
-function getChildrenEl(item) {
-    return item.querySelector(":scope > .children");
-}
-
-// The text being edited, or null if the caret is elsewhere.
-function getFocusedText() {
-    const el = document.activeElement;
-    return el.classList.contains("text") ? el : null;
+function updateToggle(item) {
+    const toggle = item.querySelector(":scope > .row > .toggle");
+    if (hasChildren(item)) {
+        toggle.textContent = item.classList.contains("collapsed") ? FOLD_COLLAPSED : FOLD_OPEN;
+    } else {
+        // Keep the column width, there is just nothing to fold.
+        toggle.textContent = NBSP;
+    }
 }
 
 function setFocusedItem(item) {
@@ -123,33 +153,165 @@ function setFocusedItem(item) {
         focusedItem.classList.add("focused");
 }
 
-function hasChildren(item) {
-    return getChildrenEl(item).querySelector(":scope > .item") !== null;
+// Completion covers the whole subtree, a bullet with something left
+// undone under it is not done.
+function setCompleted(item, completed) {
+    for (const el of [item, ...item.querySelectorAll(".item")])
+        el.classList.toggle("completed", completed);
 }
 
-// Items live either in #outline or in the .children div of their
-// parent, so the parent is the item owning that div, if any. Siblings
-// are for the same reason always items, use *ElementSibling directly.
-function getParentItem(item) {
-    return item.parentElement.closest(".item");
-}
-
-// Items in document order, skipping those collapsed or zoomed out of
-// view. Visibility is decided by the text, as the rows of the zoom root
-// and its ancestors are hidden while the items themselves are not.
-function getVisibleItems() {
-    const items = document.querySelectorAll("#outline .item");
-    return Array.from(items).filter(item => getTextEl(item).checkVisibility());
-}
-
-function updateToggle(item) {
-    const toggle = item.querySelector(":scope > .row > .toggle");
-    if (hasChildren(item)) {
-        toggle.textContent = item.classList.contains("collapsed") ? FOLD_COLLAPSED : FOLD_OPEN;
-    } else {
-        // Keep the column width, there is just nothing to fold.
-        toggle.textContent = NBSP;
+function copyItemProperties(from, to) {
+    if (from.dataset.color) {
+        to.dataset.color = from.dataset.color;
+        getTextEl(to).classList.add(`bg-${from.dataset.color}`);
     }
+    if (from.classList.contains("completed"))
+        to.classList.add("completed");
+    if (from.classList.contains("collapsed"))
+        to.classList.add("collapsed");
+}
+
+function clearItemProperties(item) {
+    if (item.dataset.color) {
+        getTextEl(item).classList.remove(`bg-${item.dataset.color}`);
+        delete item.dataset.color;
+    }
+    item.classList.remove("completed");
+    item.classList.remove("collapsed");
+}
+
+function hideSiblings(item) {
+    for (const sibling of item.parentElement.children)
+        if (sibling !== item) sibling.classList.add("zoom-hidden");
+}
+
+function getCursorPos(el) {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return 0;
+    const range = sel.getRangeAt(0);
+    if (!el.contains(range.startContainer)) return 0;
+    const preRange = document.createRange();
+    preRange.selectNodeContents(el);
+    preRange.setEnd(range.startContainer, range.startOffset);
+    return preRange.toString().length;
+}
+
+function setCursorPos(el, pos) {
+    const range = document.createRange();
+    const sel = window.getSelection();
+    if (el.childNodes.length === 0) {
+        range.setStart(el, 0);
+    } else {
+        const node = el.childNodes[0];
+        range.setStart(node, Math.min(pos, node.textContent.length));
+    }
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+function focusItemStart(item) {
+    const textEl = getTextEl(item);
+    textEl.focus();
+    setCursorPos(textEl, 0);
+}
+
+function focusItemEnd(item) {
+    const textEl = getTextEl(item);
+    textEl.focus();
+    setCursorPos(textEl, textEl.textContent.length);
+}
+
+// Put the caret where removed items were: at the end of what was above
+// them, or failing that at the start of what was below. The outline
+// must never be left empty, there would be nothing to type into.
+function focusAfterRemoval(prevItem, nextItem) {
+    const outline = getOutlineEl();
+    if (!outline.querySelector(".item")) {
+        const item = createItem("");
+        outline.appendChild(item);
+        getTextEl(item).focus();
+    } else if (prevItem) {
+        focusItemEnd(prevItem);
+    } else if (nextItem) {
+        focusItemStart(nextItem);
+    }
+}
+
+// Bare URLs in a bullet become links when the caret leaves it, and
+// stripLinks turns them back into plain text when it returns, so that
+// editing never has to work around the markup.
+function renderLinks(textEl) {
+    const text = textEl.textContent;
+    const matches = [...text.matchAll(/\b[a-zA-Z][a-zA-Z0-9+.-]*:\/\/\S+/g)];
+    if (matches.length === 0) return;
+    const frag = document.createDocumentFragment();
+    let end = 0;
+    for (const match of matches) {
+        if (match.index > end)
+            frag.appendChild(document.createTextNode(text.slice(end, match.index)));
+        const a = document.createElement("a");
+        a.href = match[0];
+        a.textContent = match[0];
+        a.target = "_blank";
+        a.rel = "noopener";
+        frag.appendChild(a);
+        end = match.index + match[0].length;
+    }
+    if (end < text.length)
+        frag.appendChild(document.createTextNode(text.slice(end)));
+    textEl.replaceChildren(frag);
+}
+
+// Assigning the text back to itself collapses the links into a single
+// text node.
+function stripLinks(textEl) {
+    if (textEl.querySelector("a"))
+        textEl.textContent = textEl.textContent;
+}
+
+function renderAllLinks() {
+    const allTexts = document.querySelectorAll("#outline .text");
+    for (const textEl of allTexts)
+        renderLinks(textEl);
+}
+
+function notify(message) {
+    let toast = document.getElementById("toast");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "toast";
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.style.opacity = "1";
+    clearTimeout(notifyTimeout);
+    notifyTimeout = setTimeout(() => { toast.style.opacity = "0"; }, 1500);
+}
+
+function itemToText(item, indent) {
+    const text = getTextEl(item).textContent;
+    const prefix = "    ".repeat(indent);
+    let result = `${prefix}- ${text}\n`;
+    const childrenEl = getChildrenEl(item);
+    for (const child of childrenEl.querySelectorAll(":scope > .item"))
+        result += itemToText(child, indent + 1);
+    return result;
+}
+
+function copyAsText(items, verb="Copied") {
+    const text = items.map(item => itemToText(item, 0)).join("");
+    navigator.clipboard.writeText(text);
+    notify(`${verb} ${items.length} ${items.length === 1 ? "bullet" : "bullets"}`);
+}
+
+// Ctrl+Shift+C copies the selection if there is one, else the bullet
+// being edited, and does nothing if the caret is outside the outline.
+function copySelectionOrFocused() {
+    if (selectedItems.length > 0)
+        return copyAsText(getSelectionRoots());
+    const textEl = getFocusedText();
+    if (textEl) copyAsText([textEl.closest(".item")]);
 }
 
 function clearSelection() {
@@ -221,311 +383,6 @@ function extendSelection(e, delta) {
     window.getSelection().removeAllRanges();
 }
 
-function handleTabMulti() {
-    checkpoint();
-    const activeText = getFocusedText();
-    const cursorPos = activeText ? getCursorPos(activeText) : null;
-    const selectedSet = new Set(selectedItems);
-    const roots = getSelectionRoots();
-    const groups = groupRootsByParent(roots);
-    for (const group of groups) {
-        let target = group.roots[0].previousElementSibling;
-        while (target && selectedSet.has(target))
-            target = target.previousElementSibling;
-        if (!target) continue;
-        if (target.classList.contains("collapsed"))
-            target.classList.remove("collapsed");
-        const targetChildrenEl = getChildrenEl(target);
-        const oldParent = getParentItem(group.roots[0]);
-        for (const root of group.roots)
-            targetChildrenEl.appendChild(root);
-        updateToggle(target);
-        if (oldParent) updateToggle(oldParent);
-    }
-    if (cursorPos !== null) {
-        suppressSelectionClear = true;
-        activeText.focus();
-        setCursorPos(activeText, cursorPos);
-    }
-    save();
-}
-
-function handleShiftTabMulti() {
-    checkpoint();
-    const activeText = getFocusedText();
-    const cursorPos = activeText ? getCursorPos(activeText) : null;
-    const selectedSet = new Set(selectedItems);
-    const roots = getSelectionRoots();
-    const groups = groupRootsByParent(roots);
-    for (const group of groups) {
-        const firstRoot = group.roots[0];
-        const lastRoot = group.roots[group.roots.length - 1];
-        const parentItem = getParentItem(firstRoot);
-        if (!parentItem) continue;
-        if (parentItem.classList.contains("zoom-root")) continue;
-        const grandparentContainer = parentItem.parentElement;
-        // Gather following non-selected siblings after last root
-        const followingSiblings = [];
-        let sibling = lastRoot.nextElementSibling;
-        while (sibling) {
-            if (!selectedSet.has(sibling))
-                followingSiblings.push(sibling);
-            sibling = sibling.nextElementSibling;
-        }
-        // Move following siblings into last root's children
-        const lastChildrenEl = getChildrenEl(lastRoot);
-        for (const s of followingSiblings)
-            lastChildrenEl.appendChild(s);
-        // Move group roots after parentItem in grandparent
-        let insertRef = parentItem.nextSibling;
-        for (const root of group.roots) {
-            grandparentContainer.insertBefore(root, insertRef);
-            insertRef = root.nextSibling;
-        }
-        updateToggle(parentItem);
-        for (const root of group.roots)
-            updateToggle(root);
-    }
-    if (cursorPos !== null) {
-        suppressSelectionClear = true;
-        activeText.focus();
-        setCursorPos(activeText, cursorPos);
-    }
-    save();
-}
-
-function toggleCompleteMulti() {
-    checkpoint();
-    // Complete unless everything selected is already complete.
-    const completing = selectedItems.some(it => !it.classList.contains("completed"));
-    for (const root of getSelectionRoots())
-        setCompleted(root, completing);
-    save();
-}
-
-function handleDeleteMulti() {
-    checkpoint();
-    const selectedSet = new Set(selectedItems);
-    const roots = getSelectionRoots();
-    const firstRoot = roots[0];
-    const lastRoot = roots[roots.length - 1];
-    // Find focus target in visible document order
-    const visibleItems = getVisibleItems();
-    const firstIdx = visibleItems.indexOf(firstRoot);
-    const lastIdx = visibleItems.indexOf(lastRoot);
-    let focusTarget = null;
-    for (let i = firstIdx - 1; i >= 0; i--) {
-        if (!selectedSet.has(visibleItems[i])) {
-            focusTarget = visibleItems[i];
-            break;
-        }
-    }
-    if (!focusTarget) {
-        for (let i = lastIdx + 1; i < visibleItems.length; i++) {
-            if (!selectedSet.has(visibleItems[i])) {
-                focusTarget = visibleItems[i];
-                break;
-            }
-        }
-    }
-    if (!focusTarget) focusTarget = getParentItem(firstRoot);
-    // Collect original parents for toggle refresh
-    const parents = new Set();
-    for (const root of roots) {
-        const parent = getParentItem(root);
-        if (parent) parents.add(parent);
-    }
-    // Remove all roots (descendants go with them)
-    for (const root of roots)
-        root.remove();
-    clearSelection();
-    for (const parent of parents)
-        updateToggle(parent);
-    focusAfterRemoval(focusTarget, null);
-    save();
-}
-
-function applyColor(item, color) {
-    checkpoint();
-    const textEl = getTextEl(item);
-    for (const cls of [...textEl.classList])
-        if (cls.startsWith("bg-")) textEl.classList.remove(cls);
-    if (color) {
-        item.dataset.color = color;
-        textEl.classList.add(`bg-${color}`);
-    } else {
-        delete item.dataset.color;
-    }
-    save();
-}
-
-// Completion covers the whole subtree, a bullet with something left
-// undone under it is not done.
-function setCompleted(item, completed) {
-    for (const el of [item, ...item.querySelectorAll(".item")])
-        el.classList.toggle("completed", completed);
-}
-
-function toggleComplete(item) {
-    checkpoint();
-    const completing = !item.classList.contains("completed");
-    setCompleted(item, completing);
-    if (completing) {
-        const nextItem = item.nextElementSibling;
-        if (nextItem) getTextEl(nextItem).focus();
-    }
-    save();
-}
-
-function copyItemProperties(from, to) {
-    if (from.dataset.color) {
-        to.dataset.color = from.dataset.color;
-        getTextEl(to).classList.add(`bg-${from.dataset.color}`);
-    }
-    if (from.classList.contains("completed"))
-        to.classList.add("completed");
-    if (from.classList.contains("collapsed"))
-        to.classList.add("collapsed");
-}
-
-function clearItemProperties(item) {
-    if (item.dataset.color) {
-        getTextEl(item).classList.remove(`bg-${item.dataset.color}`);
-        delete item.dataset.color;
-    }
-    item.classList.remove("completed");
-    item.classList.remove("collapsed");
-}
-
-function itemToText(item, indent) {
-    const text = getTextEl(item).textContent;
-    const prefix = "    ".repeat(indent);
-    let result = `${prefix}- ${text}\n`;
-    const childrenEl = getChildrenEl(item);
-    for (const child of childrenEl.querySelectorAll(":scope > .item"))
-        result += itemToText(child, indent + 1);
-    return result;
-}
-
-function copyAsText(items, verb="Copied") {
-    const text = items.map(item => itemToText(item, 0)).join("");
-    navigator.clipboard.writeText(text);
-    notify(`${verb} ${items.length} ${items.length === 1 ? "bullet" : "bullets"}`);
-}
-
-// Ctrl+Shift+C copies the selection if there is one, else the bullet
-// being edited, and does nothing if the caret is outside the outline.
-function copySelectionOrFocused() {
-    if (selectedItems.length > 0)
-        return copyAsText(getSelectionRoots());
-    const textEl = getFocusedText();
-    if (textEl) copyAsText([textEl.closest(".item")]);
-}
-
-function notify(message) {
-    let toast = document.getElementById("toast");
-    if (!toast) {
-        toast = document.createElement("div");
-        toast.id = "toast";
-        document.body.appendChild(toast);
-    }
-    toast.textContent = message;
-    toast.style.opacity = "1";
-    clearTimeout(notifyTimeout);
-    notifyTimeout = setTimeout(() => { toast.style.opacity = "0"; }, 1500);
-}
-
-// Bare URLs in a bullet become links when the caret leaves it, and
-// stripLinks turns them back into plain text when it returns, so that
-// editing never has to work around the markup.
-function renderLinks(textEl) {
-    const text = textEl.textContent;
-    const matches = [...text.matchAll(/\b[a-zA-Z][a-zA-Z0-9+.-]*:\/\/\S+/g)];
-    if (matches.length === 0) return;
-    const frag = document.createDocumentFragment();
-    let end = 0;
-    for (const match of matches) {
-        if (match.index > end)
-            frag.appendChild(document.createTextNode(text.slice(end, match.index)));
-        const a = document.createElement("a");
-        a.href = match[0];
-        a.textContent = match[0];
-        a.target = "_blank";
-        a.rel = "noopener";
-        frag.appendChild(a);
-        end = match.index + match[0].length;
-    }
-    if (end < text.length)
-        frag.appendChild(document.createTextNode(text.slice(end)));
-    textEl.replaceChildren(frag);
-}
-
-// Assigning the text back to itself collapses the links into a single
-// text node.
-function stripLinks(textEl) {
-    if (textEl.querySelector("a"))
-        textEl.textContent = textEl.textContent;
-}
-
-function renderAllLinks() {
-    const allTexts = document.querySelectorAll("#outline .text");
-    for (const textEl of allTexts)
-        renderLinks(textEl);
-}
-
-function getCursorPos(el) {
-    const sel = window.getSelection();
-    if (!sel.rangeCount) return 0;
-    const range = sel.getRangeAt(0);
-    if (!el.contains(range.startContainer)) return 0;
-    const preRange = document.createRange();
-    preRange.selectNodeContents(el);
-    preRange.setEnd(range.startContainer, range.startOffset);
-    return preRange.toString().length;
-}
-
-function setCursorPos(el, pos) {
-    const range = document.createRange();
-    const sel = window.getSelection();
-    if (el.childNodes.length === 0) {
-        range.setStart(el, 0);
-    } else {
-        const node = el.childNodes[0];
-        range.setStart(node, Math.min(pos, node.textContent.length));
-    }
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
-}
-
-function focusItemStart(item) {
-    const textEl = getTextEl(item);
-    textEl.focus();
-    setCursorPos(textEl, 0);
-}
-
-function focusItemEnd(item) {
-    const textEl = getTextEl(item);
-    textEl.focus();
-    setCursorPos(textEl, textEl.textContent.length);
-}
-
-// Put the caret where removed items were: at the end of what was above
-// them, or failing that at the start of what was below. The outline
-// must never be left empty, there would be nothing to type into.
-function focusAfterRemoval(prevItem, nextItem) {
-    const outline = getOutlineEl();
-    if (!outline.querySelector(".item")) {
-        const item = createItem("");
-        outline.appendChild(item);
-        getTextEl(item).focus();
-    } else if (prevItem) {
-        focusItemEnd(prevItem);
-    } else if (nextItem) {
-        focusItemStart(nextItem);
-    }
-}
-
 function serialize(container) {
     const items = container.querySelectorAll(":scope > .item");
     const result = [];
@@ -559,6 +416,10 @@ function deserialize(items, container) {
         }
         updateToggle(item);
     }
+}
+
+function storageKey(name, account=ACCOUNT) {
+    return `tinynotes_u${account}_${name}`;
 }
 
 // Local storage holds the last state known to have reached the sync
@@ -748,16 +609,6 @@ function redo() {
     notify("Redo");
 }
 
-// Bullets may be empty, breadcrumbs and titles may not be blank.
-function getItemLabel(item) {
-    return getTextEl(item).textContent || "(empty)";
-}
-
-function hideSiblings(item) {
-    for (const sibling of item.parentElement.children)
-        if (sibling !== item) sibling.classList.add("zoom-hidden");
-}
-
 // Show only the zoomed item, its subtree and the path down to it.
 function applyZoom() {
     const outline = getOutlineEl();
@@ -838,6 +689,17 @@ function dismissBreadcrumbMenus() {
         el.classList.remove("visible");
 }
 
+function zoomTo(id) {
+    commitTextEdit();
+    zoomedId = id === "root" ? null : id;
+    applyZoom();
+    if (zoomedId) {
+        location.hash = zoomedId;
+    } else {
+        window.history.replaceState(null, "", location.pathname + location.search);
+    }
+}
+
 // Zooming into a bullet with nothing under it would show an empty
 // page, so give it a child to type into.
 function zoomIntoItem(item) {
@@ -849,17 +711,6 @@ function zoomIntoItem(item) {
     updateToggle(item);
     save();
     getTextEl(child).focus();
-}
-
-function zoomTo(id) {
-    commitTextEdit();
-    zoomedId = id === "root" ? null : id;
-    applyZoom();
-    if (zoomedId) {
-        location.hash = zoomedId;
-    } else {
-        window.history.replaceState(null, "", location.pathname + location.search);
-    }
 }
 
 function handleEnter(e) {
@@ -1004,6 +855,35 @@ function indentItem(textEl) {
     save();
 }
 
+function handleTabMulti() {
+    checkpoint();
+    const activeText = getFocusedText();
+    const cursorPos = activeText ? getCursorPos(activeText) : null;
+    const selectedSet = new Set(selectedItems);
+    const roots = getSelectionRoots();
+    const groups = groupRootsByParent(roots);
+    for (const group of groups) {
+        let target = group.roots[0].previousElementSibling;
+        while (target && selectedSet.has(target))
+            target = target.previousElementSibling;
+        if (!target) continue;
+        if (target.classList.contains("collapsed"))
+            target.classList.remove("collapsed");
+        const targetChildrenEl = getChildrenEl(target);
+        const oldParent = getParentItem(group.roots[0]);
+        for (const root of group.roots)
+            targetChildrenEl.appendChild(root);
+        updateToggle(target);
+        if (oldParent) updateToggle(oldParent);
+    }
+    if (cursorPos !== null) {
+        suppressSelectionClear = true;
+        activeText.focus();
+        setCursorPos(activeText, cursorPos);
+    }
+    save();
+}
+
 function dedentItem(textEl) {
     checkpoint();
     const item = textEl.closest(".item");
@@ -1030,6 +910,50 @@ function dedentItem(textEl) {
     save();
 }
 
+function handleShiftTabMulti() {
+    checkpoint();
+    const activeText = getFocusedText();
+    const cursorPos = activeText ? getCursorPos(activeText) : null;
+    const selectedSet = new Set(selectedItems);
+    const roots = getSelectionRoots();
+    const groups = groupRootsByParent(roots);
+    for (const group of groups) {
+        const firstRoot = group.roots[0];
+        const lastRoot = group.roots[group.roots.length - 1];
+        const parentItem = getParentItem(firstRoot);
+        if (!parentItem) continue;
+        if (parentItem.classList.contains("zoom-root")) continue;
+        const grandparentContainer = parentItem.parentElement;
+        // Gather following non-selected siblings after last root
+        const followingSiblings = [];
+        let sibling = lastRoot.nextElementSibling;
+        while (sibling) {
+            if (!selectedSet.has(sibling))
+                followingSiblings.push(sibling);
+            sibling = sibling.nextElementSibling;
+        }
+        // Move following siblings into last root's children
+        const lastChildrenEl = getChildrenEl(lastRoot);
+        for (const s of followingSiblings)
+            lastChildrenEl.appendChild(s);
+        // Move group roots after parentItem in grandparent
+        let insertRef = parentItem.nextSibling;
+        for (const root of group.roots) {
+            grandparentContainer.insertBefore(root, insertRef);
+            insertRef = root.nextSibling;
+        }
+        updateToggle(parentItem);
+        for (const root of group.roots)
+            updateToggle(root);
+    }
+    if (cursorPos !== null) {
+        suppressSelectionClear = true;
+        activeText.focus();
+        setCursorPos(activeText, cursorPos);
+    }
+    save();
+}
+
 function deleteItem(textEl) {
     checkpoint();
     const item = textEl.closest(".item");
@@ -1041,6 +965,90 @@ function deleteItem(textEl) {
     item.remove();
     if (parentItem) updateToggle(parentItem);
     focusAfterRemoval(prevItem, nextItem);
+    save();
+}
+
+function handleDeleteMulti() {
+    checkpoint();
+    const selectedSet = new Set(selectedItems);
+    const roots = getSelectionRoots();
+    const firstRoot = roots[0];
+    const lastRoot = roots[roots.length - 1];
+    // Find focus target in visible document order
+    const visibleItems = getVisibleItems();
+    const firstIdx = visibleItems.indexOf(firstRoot);
+    const lastIdx = visibleItems.indexOf(lastRoot);
+    let focusTarget = null;
+    for (let i = firstIdx - 1; i >= 0; i--) {
+        if (!selectedSet.has(visibleItems[i])) {
+            focusTarget = visibleItems[i];
+            break;
+        }
+    }
+    if (!focusTarget) {
+        for (let i = lastIdx + 1; i < visibleItems.length; i++) {
+            if (!selectedSet.has(visibleItems[i])) {
+                focusTarget = visibleItems[i];
+                break;
+            }
+        }
+    }
+    if (!focusTarget) focusTarget = getParentItem(firstRoot);
+    // Collect original parents for toggle refresh
+    const parents = new Set();
+    for (const root of roots) {
+        const parent = getParentItem(root);
+        if (parent) parents.add(parent);
+    }
+    // Remove all roots (descendants go with them)
+    for (const root of roots)
+        root.remove();
+    clearSelection();
+    for (const parent of parents)
+        updateToggle(parent);
+    focusAfterRemoval(focusTarget, null);
+    save();
+}
+
+function toggleComplete(item) {
+    checkpoint();
+    const completing = !item.classList.contains("completed");
+    setCompleted(item, completing);
+    if (completing) {
+        const nextItem = item.nextElementSibling;
+        if (nextItem) getTextEl(nextItem).focus();
+    }
+    save();
+}
+
+function toggleCompleteMulti() {
+    checkpoint();
+    // Complete unless everything selected is already complete.
+    const completing = selectedItems.some(it => !it.classList.contains("completed"));
+    for (const root of getSelectionRoots())
+        setCompleted(root, completing);
+    save();
+}
+
+function applyColor(item, color) {
+    checkpoint();
+    const textEl = getTextEl(item);
+    for (const cls of [...textEl.classList])
+        if (cls.startsWith("bg-")) textEl.classList.remove(cls);
+    if (color) {
+        item.dataset.color = color;
+        textEl.classList.add(`bg-${color}`);
+    } else {
+        delete item.dataset.color;
+    }
+    save();
+}
+
+function toggleCollapse(item) {
+    if (!hasChildren(item)) return;
+    checkpoint();
+    item.classList.toggle("collapsed");
+    updateToggle(item);
     save();
 }
 
@@ -1068,14 +1076,6 @@ function handleArrowDown(e) {
         nextTextEl.focus();
         setCursorPos(nextTextEl, Math.min(cursorPos, nextTextEl.textContent.length));
     }
-}
-
-function toggleCollapse(item) {
-    if (!hasChildren(item)) return;
-    checkpoint();
-    item.classList.toggle("collapsed");
-    updateToggle(item);
-    save();
 }
 
 function detectIndentUnit(lines) {

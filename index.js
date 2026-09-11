@@ -9,6 +9,7 @@ const ACCOUNT = new URLSearchParams(location.search).get("u") || "1";
 const DEMO = new URLSearchParams(location.search).has("demo");
 
 const BULLET = "\u2022";
+
 // Name, class suffix and Alt shortcut of each highlight colour. The
 // menu shows them as swatches in two rows, clearing last.
 const COLORS = [
@@ -20,6 +21,7 @@ const COLORS = [
     ["Green", "green", "g"],
     ["Clear", null, "c"],
 ];
+
 const FOLD_COLLAPSED = "⋯";
 const FOLD_OPEN = "⋮";
 const NBSP = "\u00a0";
@@ -1624,23 +1626,18 @@ function createMenu() {
     const ctrl = isMac ? "Cmd" : "Ctrl";
     const alt = isMac ? "Opt" : "Alt";
     // Actions grouped into rows, related ones sharing a row.
-    const rows = [
-        [
-            ["Undo", `${ctrl}+Z`, undo],
-            ["Redo", `${ctrl}+Shift+Z`, redo],
-        ],
-        [
-            ["Indent", "Tab", indentItem],
-            ["Dedent", "Shift+Tab", dedentItem],
-        ],
-        [
-            ["Complete", `${ctrl}+Enter`, textEl => toggleComplete(textEl.closest(".item"))],
-            ["Delete", `${ctrl}+Shift+Backspace`, deleteItem],
-        ],
-        [
-            ["Copy as text", `${ctrl}+Shift+C`, copySelectionOrFocused],
-        ],
-    ];
+    const rows = [[
+        ["Undo", `${ctrl}+Z`, undo],
+        ["Redo", `${ctrl}+Shift+Z`, redo],
+    ], [
+        ["Indent", "Tab", indentItem],
+        ["Dedent", "Shift+Tab", dedentItem],
+    ], [
+        ["Complete", `${ctrl}+Enter`, textEl => toggleComplete(textEl.closest(".item"))],
+        ["Delete", `${ctrl}+Shift+Backspace`, deleteItem],
+    ], [
+        ["Copy as text", `${ctrl}+Shift+C`, copySelectionOrFocused],
+    ]];
     const menu = document.createElement("div");
     menu.id = "menu";
     const syncStatus = document.createElement("span");

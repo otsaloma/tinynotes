@@ -33,8 +33,6 @@ let textDragState = null;
 let undoStack = [];
 let zoomedId = null;
 
-// DOM Helpers
-
 function listAllIds() {
     return Array.from(document.querySelectorAll(".item[data-id]")).map(el => el.dataset.id);
 }
@@ -136,8 +134,6 @@ function updateToggle(item) {
     }
 }
 
-// Multi-Select Helpers
-
 function clearSelection() {
     for (const item of selectedItems)
         item.classList.remove("selected");
@@ -178,8 +174,6 @@ function groupRootsByParent(roots) {
     }
     return groups;
 }
-
-// Multi-Select Operations
 
 function handleShiftArrowDown(e) {
     e.preventDefault();
@@ -403,8 +397,6 @@ function handleDeleteMulti() {
     save();
 }
 
-// Color Menu
-
 const COLOR_CHOICES = ["yellow", "orange", "red", "violet", "blue", "green"];
 
 const COLOR_SHORTCUTS = {
@@ -506,8 +498,6 @@ function notify(message) {
     notifyTimeout = setTimeout(() => { toast.style.opacity = "0"; }, 1500);
 }
 
-// Link Rendering
-
 const urlPattern = /\b[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s]+/g;
 
 function renderLinks(textEl) {
@@ -549,8 +539,6 @@ function renderAllLinks() {
         renderLinks(textEl);
 }
 
-// Cursor Helpers
-
 function getCursorPos(el) {
     const sel = window.getSelection();
     if (!sel.rangeCount) return 0;
@@ -575,8 +563,6 @@ function setCursorPos(el, pos) {
     sel.removeAllRanges();
     sel.addRange(range);
 }
-
-// Persistence
 
 function serialize(container) {
     const items = container.querySelectorAll(":scope > .item");
@@ -627,8 +613,6 @@ function save() {
     updateSyncStatus("pending");
     debouncedSync();
 }
-
-// Sync
 
 function updateSyncStatus(state, status) {
     const el = document.getElementById("sync-status");
@@ -724,8 +708,6 @@ async function fetchFromRemote(retry) {
     }
 }
 
-// Undo/Redo
-
 function captureState() {
     const outline = document.getElementById("outline");
     const state = {
@@ -810,8 +792,6 @@ function redo() {
     restoreState(redoStack.pop());
     notify("Redo");
 }
-
-// Zoom
 
 function applyZoom() {
     const outline = document.getElementById("outline");
@@ -927,8 +907,6 @@ function zoomTo(id) {
         window.history.replaceState(null, "", location.pathname + location.search);
     }
 }
-
-// Structural Operations
 
 function handleEnter(e) {
     e.preventDefault();
@@ -1187,8 +1165,6 @@ function handleArrowDown(e) {
     }
 }
 
-// Collapse/Expand
-
 function toggleCollapse(item) {
     if (!hasChildren(item)) return;
     commitTextCheckpoint();
@@ -1197,8 +1173,6 @@ function toggleCollapse(item) {
     updateToggle(item);
     save();
 }
-
-// Paste Handling
 
 function detectIndentUnit(lines) {
     let min = Infinity;
@@ -1268,8 +1242,6 @@ function handlePaste(e) {
     save();
 }
 
-// Drag and Drop
-
 function findDropTarget(y) {
     const visibleItems = getVisibleItems();
     for (const textEl of visibleItems) {
@@ -1336,8 +1308,6 @@ function performDrop(draggedItem, target) {
         updateToggle(item);
     save();
 }
-
-// Event Handling
 
 function setupEvents() {
     const outline = document.getElementById("outline");
@@ -1667,13 +1637,9 @@ function setupEvents() {
     });
 }
 
-// Storage
-
 function storageKey(name) {
     return `tinynotes_u${ACCOUNT}_${name}`;
 }
-
-// Auth
 
 function getRedirectUri() {
     return location.origin + location.pathname;
@@ -1782,8 +1748,6 @@ function createLoginPage() {
     container.appendChild(link);
     document.body.appendChild(container);
 }
-
-// Main
 
 function createAction(name, key, onClick) {
     const action = document.createElement("span");

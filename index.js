@@ -32,7 +32,7 @@ let dragState = null;
 let focusedItem = null;
 let focusEntry = null;
 let hasUnsyncedChanges = false;
-let isTouchDevice = navigator.maxTouchPoints > 0;
+let notifyTimeout = null;
 let redoStack = [];
 let selectedItems = [];
 let selectionAnchor = null;
@@ -141,6 +141,7 @@ function updateToggle(item) {
     if (hasChildren(item)) {
         toggle.textContent = item.classList.contains("collapsed") ? FOLD_COLLAPSED : FOLD_OPEN;
     } else {
+        // Keep the column width, there is just nothing to fold.
         toggle.textContent = NBSP;
     }
 }
@@ -416,7 +417,6 @@ function copySelectionOrFocused() {
     if (textEl) copyAsText([textEl.closest(".item")]);
 }
 
-let notifyTimeout;
 function notify(message) {
     let toast = document.getElementById("toast");
     if (!toast) {
@@ -1003,11 +1003,6 @@ function indentItem(textEl) {
     save();
 }
 
-function handleTab(e) {
-    e.preventDefault();
-    indentItem(e.target);
-}
-
 function dedentItem(textEl) {
     checkpoint();
     const item = textEl.closest(".item");
@@ -1046,11 +1041,6 @@ function deleteItem(textEl) {
     if (parentItem) updateToggle(parentItem);
     focusAfterRemoval(prevItem, nextItem);
     save();
-}
-
-function handleShiftTab(e) {
-    e.preventDefault();
-    dedentItem(e.target);
 }
 
 function handleArrowUp(e) {
@@ -1211,9 +1201,9 @@ function performDrop(draggedItem, target) {
         const childrenEl = getChildrenEl(ref);
         childrenEl.insertBefore(draggedItem, childrenEl.firstChild);
     }
-    // Update toggles on old and new parents
-    const allItems = document.querySelectorAll("#outline .item");
-    for (const item of allItems)
+    // Both the old and the new parent may have gained or lost their
+    // only child, refreshing all is cheap enough.
+    for (const item of getOutlineEl().querySelectorAll(".item"))
         updateToggle(item);
     save();
 }
@@ -1303,9 +1293,11 @@ function setupOutlineEvents() {
         } else if (e.key === "Delete") {
             handleDelete(e);
         } else if (e.key === "Tab" && !e.shiftKey) {
-            handleTab(e);
+            e.preventDefault();
+            indentItem(e.target);
         } else if (e.key === "Tab" && e.shiftKey) {
-            handleShiftTab(e);
+            e.preventDefault();
+            dedentItem(e.target);
         } else if (e.key === "ArrowUp") {
             handleArrowUp(e);
         } else if (e.key === "ArrowDown") {
@@ -1367,13 +1359,10 @@ function setupOutlineEvents() {
             const item = e.target.closest(".item");
             toggleCollapse(item);
         } else if (e.target.classList.contains("row")) {
-            const textEl = e.target.querySelector(".text");
-            if (textEl && window.getSelection().isCollapsed) {
-                textEl.focus();
-                const sel = window.getSelection();
-                sel.selectAllChildren(textEl);
-                sel.collapseToEnd();
-            }
+            // Clicking beside the text puts the caret at the end of
+            // it, unless a text selection is being made.
+            if (window.getSelection().isCollapsed)
+                focusItemEnd(e.target.closest(".item"));
         } else if (e.target.classList.contains("bullet")) {
             zoomIntoItem(e.target.closest(".item"));
         }
@@ -1508,11 +1497,7 @@ function setupDragEvents() {
             document.body.style.userSelect = "";
             hideDropIndicator(dragIndicator);
             const target = findDropTarget(e.clientY);
-            if (target) {
-                const oldParent = getParentItem(dragState.item);
-                performDrop(dragState.item, target);
-                if (oldParent) updateToggle(oldParent);
-            }
+            if (target) performDrop(dragState.item, target);
             dragDidDrop = true;
         }
         dragState = null;
@@ -1626,11 +1611,11 @@ function createLoginPage() {
     document.body.appendChild(container);
 }
 
-function createAction(name, key, onClick) {
+function createAction(name, shortcut, onClick) {
     const action = document.createElement("span");
     action.className = "menu-action";
     action.textContent = name;
-    if (key) action.title = key;
+    if (shortcut) action.title = shortcut;
     action.addEventListener("click", onClick);
     return action;
 }
@@ -1642,19 +1627,19 @@ function createMenu() {
     // Actions grouped into rows, related ones sharing a row.
     const rows = [
         [
-            ["Undo", `${ctrl}+Z`, () => undo()],
-            ["Redo", `${ctrl}+Shift+Z`, () => redo()],
+            ["Undo", `${ctrl}+Z`, undo],
+            ["Redo", `${ctrl}+Shift+Z`, redo],
         ],
         [
-            ["Indent", "Tab", textEl => indentItem(textEl)],
-            ["Dedent", "Shift+Tab", textEl => dedentItem(textEl)],
+            ["Indent", "Tab", indentItem],
+            ["Dedent", "Shift+Tab", dedentItem],
         ],
         [
             ["Complete", `${ctrl}+Enter`, textEl => toggleComplete(textEl.closest(".item"))],
-            ["Delete", `${ctrl}+Shift+Backspace`, textEl => deleteItem(textEl)],
+            ["Delete", `${ctrl}+Shift+Backspace`, deleteItem],
         ],
         [
-            ["Copy as text", `${ctrl}+Shift+C`, () => copySelectionOrFocused()],
+            ["Copy as text", `${ctrl}+Shift+C`, copySelectionOrFocused],
         ],
     ];
     const menu = document.createElement("div");
@@ -1685,13 +1670,13 @@ function createMenu() {
     for (const row of rows) {
         const rowEl = document.createElement("div");
         rowEl.className = "menu-row";
-        for (const [name, key, action] of row)
-            rowEl.appendChild(createAction(name, key, () => activate(action)));
+        for (const [name, shortcut, action] of row)
+            rowEl.appendChild(createAction(name, shortcut, () => activate(action)));
         popover.appendChild(rowEl);
     }
     const logoutRow = document.createElement("div");
     logoutRow.className = "menu-row";
-    logoutRow.appendChild(createAction("Log out", null, () => logout()));
+    logoutRow.appendChild(createAction("Log out", null, logout));
     popover.appendChild(logoutRow);
     const setColor = color => activate(textEl => applyColor(textEl.closest(".item"), color));
     for (const row of [COLORS.slice(0, 4), COLORS.slice(4)]) {
@@ -1773,7 +1758,8 @@ async function start() {
     renderAllLinks();
     setupEvents();
     const visibleItems = getVisibleItems();
-    if (visibleItems.length > 0 && !isTouchDevice)
+    // Don't pop up the on-screen keyboard on phones and tablets.
+    if (visibleItems.length > 0 && navigator.maxTouchPoints === 0)
         getTextEl(visibleItems[0]).focus();
 }
 

@@ -639,10 +639,6 @@ function debouncedSync() {
     syncTimeout = setTimeout(() => syncToRemote(), SYNC_DEBOUNCE_MS);
 }
 
-window.addEventListener("beforeunload", e => {
-    if (hasUnsyncedChanges) e.preventDefault();
-});
-
 async function fetchFromRemote(retry) {
     const token = localStorage.getItem(storageKey("id_token"));
     if (!token) return null;
@@ -1225,6 +1221,10 @@ function setupEvents() {
         const id = hash || "root";
         if ((id === "root" && !zoomedId) || id === zoomedId) return;
         zoomTo(id);
+    });
+    // Warn before leaving with edits that never reached the server.
+    window.addEventListener("beforeunload", e => {
+        if (hasUnsyncedChanges) e.preventDefault();
     });
 }
 

@@ -10,7 +10,6 @@ should be able to easily deploy to your own AWS. It has been designed to
 be very cost efficient and shouldn't cost you more than $1/mo to host.
 
 ![screenshot](screenshot-1.png)
-
 ![screenshot](screenshot-2.png)
 
 ## Local Development

@@ -1052,41 +1052,54 @@ function toggleCollapse(item) {
     save();
 }
 
-function isCaretOnEdgeLine(textEl, toEnd) {
+// Measures one-character ranges, as a collapsed range at a wrap point
+// could be placed at the end of either line.
+function getLineStarts(textEl) {
     const node = textEl.firstChild;
-    if (!node) return true;
-    const edge = document.createRange();
-    edge.setStart(node, toEnd ? node.length : 0);
-    const caret = window.getSelection().getRangeAt(0).cloneRange();
-    caret.collapse(!toEnd);
-    return Math.abs(caret.getBoundingClientRect().top - edge.getBoundingClientRect().top) < 1;
+    const starts = [0];
+    if (!node) return starts;
+    const range = document.createRange();
+    let prevTop = null;
+    for (let i = 0; i < node.length; i++) {
+        range.setStart(node, i);
+        range.setEnd(node, i + 1);
+        const top = range.getBoundingClientRect().top;
+        if (prevTop !== null && Math.abs(top - prevTop) >= 1) starts.push(i);
+        prevTop = top;
+    }
+    return starts;
 }
 
 function handleArrowUp(e) {
     const textEl = e.target;
-    if (!isCaretOnEdgeLine(textEl, false)) return;
-    e.preventDefault();
     const cursorPos = getCursorPos(textEl);
+    const lineStarts = getLineStarts(textEl);
+    if (lineStarts.length > 1 && cursorPos >= lineStarts[1]) return;
+    e.preventDefault();
     const visibleItems = getVisibleItems();
     const idx = visibleItems.indexOf(textEl.closest(".item"));
     if (idx > 0) {
         const prevTextEl = getTextEl(visibleItems[idx - 1]);
+        const lastLineStart = getLineStarts(prevTextEl).at(-1);
         prevTextEl.focus();
-        setCursorPos(prevTextEl, Math.min(cursorPos, prevTextEl.textContent.length));
+        setCursorPos(prevTextEl, Math.min(lastLineStart + cursorPos, prevTextEl.textContent.length));
     }
 }
 
 function handleArrowDown(e) {
     const textEl = e.target;
-    if (!isCaretOnEdgeLine(textEl, true)) return;
-    e.preventDefault();
     const cursorPos = getCursorPos(textEl);
+    const lastLineStart = getLineStarts(textEl).at(-1);
+    if (cursorPos < lastLineStart) return;
+    e.preventDefault();
     const visibleItems = getVisibleItems();
     const idx = visibleItems.indexOf(textEl.closest(".item"));
     if (idx < visibleItems.length - 1) {
         const nextTextEl = getTextEl(visibleItems[idx + 1]);
+        const nextLineStarts = getLineStarts(nextTextEl);
+        const firstLineEnd = nextLineStarts.length > 1 ? nextLineStarts[1] - 1 : nextTextEl.textContent.length;
         nextTextEl.focus();
-        setCursorPos(nextTextEl, Math.min(cursorPos, nextTextEl.textContent.length));
+        setCursorPos(nextTextEl, Math.min(cursorPos - lastLineStart, firstLineEnd));
     }
 }
 

@@ -1052,9 +1052,20 @@ function toggleCollapse(item) {
     save();
 }
 
+function isCaretOnEdgeLine(textEl, toEnd) {
+    const node = textEl.firstChild;
+    if (!node) return true;
+    const edge = document.createRange();
+    edge.setStart(node, toEnd ? node.length : 0);
+    const caret = window.getSelection().getRangeAt(0).cloneRange();
+    caret.collapse(!toEnd);
+    return Math.abs(caret.getBoundingClientRect().top - edge.getBoundingClientRect().top) < 1;
+}
+
 function handleArrowUp(e) {
-    e.preventDefault();
     const textEl = e.target;
+    if (!isCaretOnEdgeLine(textEl, false)) return;
+    e.preventDefault();
     const cursorPos = getCursorPos(textEl);
     const visibleItems = getVisibleItems();
     const idx = visibleItems.indexOf(textEl.closest(".item"));
@@ -1066,8 +1077,9 @@ function handleArrowUp(e) {
 }
 
 function handleArrowDown(e) {
-    e.preventDefault();
     const textEl = e.target;
+    if (!isCaretOnEdgeLine(textEl, true)) return;
+    e.preventDefault();
     const cursorPos = getCursorPos(textEl);
     const visibleItems = getVisibleItems();
     const idx = visibleItems.indexOf(textEl.closest(".item"));

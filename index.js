@@ -253,6 +253,9 @@ function renderLinks(textEl) {
         const a = document.createElement("a");
         a.href = match[0];
         a.textContent = match[0];
+        // Browsers only follow links outside editable content, natively
+        // supporting e.g. middle click to open in a background tab.
+        a.contentEditable = "false";
         a.target = "_blank";
         a.rel = "noopener";
         frag.appendChild(a);
@@ -1378,9 +1381,10 @@ function handleFocusOut(e) {
 
 function handleMouseDown(e) {
     if (e.target.tagName === "A" && e.target.closest(".text")) {
+        // Keep focus out of the bullet so that the link isn't stripped
+        // before the click that follows it.
         e.preventDefault();
         e.stopPropagation();
-        window.open(e.target.href, "_blank", "noopener");
     } else if (e.target.classList.contains("bullet") && e.button === 0) {
         const item = e.target.closest(".item");
         dragState = { item, startX: e.clientX, startY: e.clientY, isDragging: false };

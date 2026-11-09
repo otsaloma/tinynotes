@@ -125,13 +125,10 @@ function createItem(text, color) {
         item.dataset.color = color;
         textEl.classList.add(`bg-${color}`);
     }
-    row.appendChild(toggle);
-    row.appendChild(bullet);
-    row.appendChild(textEl);
-    item.appendChild(row);
+    row.append(toggle, bullet, textEl);
     const children = document.createElement("div");
     children.className = "children";
-    item.appendChild(children);
+    item.append(row, children);
     return item;
 }
 
@@ -197,17 +194,9 @@ function getCursorPos(el) {
 }
 
 function setCursorPos(el, pos) {
-    const range = document.createRange();
-    const sel = window.getSelection();
-    if (el.childNodes.length === 0) {
-        range.setStart(el, 0);
-    } else {
-        const node = el.childNodes[0];
-        range.setStart(node, Math.min(pos, node.textContent.length));
-    }
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
+    const node = el.firstChild;
+    if (node) window.getSelection().collapse(node, Math.min(pos, node.textContent.length));
+    else window.getSelection().collapse(el, 0);
 }
 
 function focusItemStart(item) {
@@ -249,7 +238,7 @@ function renderLinks(textEl) {
     let end = 0;
     for (const match of matches) {
         if (match.index > end)
-            frag.appendChild(document.createTextNode(text.slice(end, match.index)));
+            frag.append(text.slice(end, match.index));
         const a = document.createElement("a");
         a.href = match[0];
         a.textContent = match[0];
@@ -258,11 +247,11 @@ function renderLinks(textEl) {
         a.contentEditable = "false";
         a.target = "_blank";
         a.rel = "noopener";
-        frag.appendChild(a);
+        frag.append(a);
         end = match.index + match[0].length;
     }
     if (end < text.length)
-        frag.appendChild(document.createTextNode(text.slice(end)));
+        frag.append(text.slice(end));
     textEl.replaceChildren(frag);
 }
 
@@ -368,7 +357,7 @@ function extendSelection(e, delta) {
     if (selectedItems.length > 0) {
         anchorIdx = visibleItems.indexOf(selectionAnchor);
         const firstIdx = visibleItems.indexOf(selectedItems[0]);
-        const lastIdx = visibleItems.indexOf(selectedItems[selectedItems.length - 1]);
+        const lastIdx = visibleItems.indexOf(selectedItems.at(-1));
         headIdx = anchorIdx === firstIdx ? lastIdx : firstIdx;
     }
     headIdx += delta;
@@ -414,7 +403,7 @@ function deserialize(items, container) {
         if (data.completed)
             item.classList.add("completed");
         container.appendChild(item);
-        if (data.children && data.children.length > 0) {
+        if (data.children?.length > 0) {
             deserialize(data.children, getChildrenEl(item));
         }
         updateToggle(item);
@@ -428,10 +417,7 @@ function storageKey(name, account=ACCOUNT) {
 // Local storage holds the last state known to have reached the sync
 // server. Nothing reads it back, notes always come from the server.
 function writeCache(items) {
-    localStorage.setItem(storageKey("notes"), JSON.stringify({
-        zoomedId: zoomedId,
-        items: items,
-    }));
+    localStorage.setItem(storageKey("notes"), JSON.stringify({zoomedId, items}));
 }
 
 function save() {
@@ -476,7 +462,7 @@ async function syncToRemote(retry) {
         const response = await fetch(`${API_URL}/notes`, {
             method: "POST",
             headers: {"Authorization": `Bearer ${token}`},
-            body: JSON.stringify({items: items, version: currentVersion}),
+            body: JSON.stringify({items, version: currentVersion}),
         });
         if (response.ok) {
             const data = await response.json();
@@ -532,7 +518,7 @@ function captureState() {
     const outline = getOutlineEl();
     const state = {
         items: serialize(outline),
-        zoomedId: zoomedId,
+        zoomedId,
         focusId: null,
         cursorPos: 0,
     };
@@ -572,7 +558,7 @@ function checkpoint() {
 
 function restoreState(state) {
     const outline = getOutlineEl();
-    outline.innerHTML = "";
+    outline.replaceChildren();
     deserialize(state.items, outline);
     setFocusedItem(null);
     zoomedId = state.zoomedId || null;
@@ -644,7 +630,7 @@ function renderHeader(target) {
 
 function renderBreadcrumbs(crumbs, menus) {
     const breadcrumbs = document.getElementById("breadcrumbs");
-    breadcrumbs.innerHTML = "";
+    breadcrumbs.replaceChildren();
     for (const crumb of crumbs) {
         const span = document.createElement("span");
         span.className = "breadcrumb";
@@ -667,7 +653,6 @@ function createBreadcrumbMenu(id) {
     const toggle = document.createElement("span");
     toggle.className = "breadcrumb-toggle";
     toggle.textContent = "▼";
-    menu.appendChild(toggle);
     const popover = document.createElement("div");
     popover.className = "popover breadcrumb-popover";
     for (const child of children.slice(0, 10)) {
@@ -683,7 +668,7 @@ function createBreadcrumbMenu(id) {
         row.textContent = "...";
         popover.appendChild(row);
     }
-    menu.appendChild(popover);
+    menu.append(toggle, popover);
     return menu;
 }
 
@@ -727,12 +712,12 @@ function handleEnter(e) {
         const childrenEl = getChildrenEl(item);
         if (hasChildren(item) && !item.classList.contains("collapsed")) {
             const newItem = createItem("");
-            childrenEl.insertBefore(newItem, childrenEl.firstChild);
+            childrenEl.prepend(newItem);
             updateToggle(item);
             getTextEl(newItem).focus();
         } else {
             const newItem = createItem("");
-            item.parentElement.insertBefore(newItem, item.nextSibling);
+            item.after(newItem);
             const parentItem = getParentItem(item);
             if (parentItem) updateToggle(parentItem);
             getTextEl(newItem).focus();
@@ -743,13 +728,10 @@ function handleEnter(e) {
         textEl.textContent = before;
         const newItem = createItem(after);
         copyItemProperties(item, newItem);
-        item.parentElement.insertBefore(newItem, item.nextSibling);
+        item.after(newItem);
         if (cursorPos === 0) {
             clearItemProperties(item);
-            const oldChildren = getChildrenEl(item);
-            const newChildren = getChildrenEl(newItem);
-            while (oldChildren.firstChild)
-                newChildren.appendChild(oldChildren.firstChild);
+            getChildrenEl(newItem).append(...getChildrenEl(item).childNodes);
             updateToggle(item);
             updateToggle(newItem);
         }
@@ -804,17 +786,13 @@ function handleBackspace(e) {
         if (parentItem) updateToggle(parentItem);
         focusAfterRemoval(prevItem, nextItem);
     } else if (text === "" && hasChildren(item)) {
-        const parentContainer = item.parentElement;
         const parentItem = getParentItem(item);
-        const nextSibling = item.nextSibling;
         const visibleItems = getVisibleItems();
         const children = Array.from(childrenEl.querySelectorAll(":scope > .item"));
         // The first child is not among the visible items if collapsed.
         const idx = visibleItems.indexOf(children[0]);
         const prevItem = idx > 0 ? visibleItems[idx - 1] : null;
-        for (const child of children)
-            parentContainer.insertBefore(child, nextSibling);
-        item.remove();
+        item.replaceWith(...children);
         if (parentItem) updateToggle(parentItem);
         if (prevItem) focusItemEnd(prevItem);
     } else {
@@ -826,9 +804,7 @@ function handleBackspace(e) {
         const prevLen = prevTextEl.textContent.length;
         prevTextEl.textContent += text;
         const children = Array.from(childrenEl.querySelectorAll(":scope > .item"));
-        const prevChildrenEl = getChildrenEl(prevItem);
-        for (const child of children)
-            prevChildrenEl.appendChild(child);
+        getChildrenEl(prevItem).append(...children);
         const parentItem = getParentItem(item);
         item.remove();
         if (parentItem) updateToggle(parentItem);
@@ -872,10 +848,8 @@ function handleTabMulti() {
         if (!target) continue;
         if (target.classList.contains("collapsed"))
             target.classList.remove("collapsed");
-        const targetChildrenEl = getChildrenEl(target);
         const oldParent = getParentItem(group.roots[0]);
-        for (const root of group.roots)
-            targetChildrenEl.appendChild(root);
+        getChildrenEl(target).append(...group.roots);
         updateToggle(target);
         if (oldParent) updateToggle(oldParent);
     }
@@ -894,7 +868,6 @@ function dedentItem(textEl) {
     if (!parentItem) return;
     if (parentItem.classList.contains("zoom-root")) return;
     const cursorPos = getCursorPos(textEl);
-    const grandparentContainer = parentItem.parentElement;
     // Move following siblings into this item's children
     const nextSiblings = [];
     let sibling = item.nextElementSibling;
@@ -902,10 +875,8 @@ function dedentItem(textEl) {
         nextSiblings.push(sibling);
         sibling = sibling.nextElementSibling;
     }
-    const childrenEl = getChildrenEl(item);
-    for (const s of nextSiblings)
-        childrenEl.appendChild(s);
-    grandparentContainer.insertBefore(item, parentItem.nextSibling);
+    getChildrenEl(item).append(...nextSiblings);
+    parentItem.after(item);
     updateToggle(parentItem);
     updateToggle(item);
     textEl.focus();
@@ -922,11 +893,10 @@ function handleShiftTabMulti() {
     const groups = groupRootsByParent(roots);
     for (const group of groups) {
         const firstRoot = group.roots[0];
-        const lastRoot = group.roots[group.roots.length - 1];
+        const lastRoot = group.roots.at(-1);
         const parentItem = getParentItem(firstRoot);
         if (!parentItem) continue;
         if (parentItem.classList.contains("zoom-root")) continue;
-        const grandparentContainer = parentItem.parentElement;
         // Gather following non-selected siblings after last root
         const followingSiblings = [];
         let sibling = lastRoot.nextElementSibling;
@@ -936,15 +906,9 @@ function handleShiftTabMulti() {
             sibling = sibling.nextElementSibling;
         }
         // Move following siblings into last root's children
-        const lastChildrenEl = getChildrenEl(lastRoot);
-        for (const s of followingSiblings)
-            lastChildrenEl.appendChild(s);
+        getChildrenEl(lastRoot).append(...followingSiblings);
         // Move group roots after parentItem in grandparent
-        let insertRef = parentItem.nextSibling;
-        for (const root of group.roots) {
-            grandparentContainer.insertBefore(root, insertRef);
-            insertRef = root.nextSibling;
-        }
+        parentItem.after(...group.roots);
         updateToggle(parentItem);
         for (const root of group.roots)
             updateToggle(root);
@@ -976,27 +940,15 @@ function handleDeleteMulti() {
     const selectedSet = new Set(selectedItems);
     const roots = getSelectionRoots();
     const firstRoot = roots[0];
-    const lastRoot = roots[roots.length - 1];
+    const lastRoot = roots.at(-1);
     // Find focus target in visible document order
     const visibleItems = getVisibleItems();
     const firstIdx = visibleItems.indexOf(firstRoot);
     const lastIdx = visibleItems.indexOf(lastRoot);
-    let focusTarget = null;
-    for (let i = firstIdx - 1; i >= 0; i--) {
-        if (!selectedSet.has(visibleItems[i])) {
-            focusTarget = visibleItems[i];
-            break;
-        }
-    }
-    if (!focusTarget) {
-        for (let i = lastIdx + 1; i < visibleItems.length; i++) {
-            if (!selectedSet.has(visibleItems[i])) {
-                focusTarget = visibleItems[i];
-                break;
-            }
-        }
-    }
-    if (!focusTarget) focusTarget = getParentItem(firstRoot);
+    const focusTarget =
+        visibleItems.findLast((item, i) => i < firstIdx && !selectedSet.has(item)) ??
+        visibleItems.find((item, i) => i > lastIdx && !selectedSet.has(item)) ??
+        getParentItem(firstRoot);
     // Collect original parents for toggle refresh
     const parents = new Set();
     for (const root of roots) {
@@ -1225,12 +1177,11 @@ function performDrop(draggedItem, target) {
     checkpoint();
     const ref = target.referenceItem;
     if (target.position === "before") {
-        ref.parentElement.insertBefore(draggedItem, ref);
+        ref.before(draggedItem);
     } else if (target.position === "after") {
-        ref.parentElement.insertBefore(draggedItem, ref.nextSibling);
+        ref.after(draggedItem);
     } else {
-        const childrenEl = getChildrenEl(ref);
-        childrenEl.insertBefore(draggedItem, childrenEl.firstChild);
+        getChildrenEl(ref).prepend(draggedItem);
     }
     // Both the old and the new parent may have gained or lost their
     // only child, refreshing all is cheap enough.
@@ -1464,7 +1415,7 @@ function setupBreadcrumbEvents() {
             return;
         }
         const row = e.target.closest(".breadcrumb-row");
-        if (row && row.dataset.id) zoomTo(row.dataset.id);
+        if (row?.dataset.id) zoomTo(row.dataset.id);
     });
     document.addEventListener("mousedown", e => {
         if (!e.target.closest(".breadcrumb-menu")) dismissBreadcrumbMenus();
@@ -1479,7 +1430,7 @@ function setupDragEvents() {
 // Dragging across text selects whole bullets rather than characters.
 function handleTextDragMove(e) {
     const el = document.elementFromPoint(e.clientX, e.clientY);
-    const currentItem = el && el.closest(".item");
+    const currentItem = el?.closest(".item");
     if (!currentItem) return;
     if (!textDragState.active && currentItem !== textDragState.startItem) {
         window.getSelection().removeAllRanges();
@@ -1528,7 +1479,7 @@ function handleDragEnd(e) {
         textDragState = null;
         return;
     }
-    if (dragState && dragState.isDragging) {
+    if (dragState?.isDragging) {
         e.preventDefault();
         dragState.item.classList.remove("dragging");
         document.body.style.cursor = "";
@@ -1573,12 +1524,12 @@ async function handleAuthCallback() {
         grant_type: "authorization_code",
         client_id: COGNITO_CLIENT_ID,
         redirect_uri: getRedirectUri(),
-        code: code,
+        code,
     });
     const response = await fetch(`https://${COGNITO_DOMAIN}/oauth2/token`, {
         method: "POST",
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: body,
+        body,
     });
     const tokens = await response.json();
     localStorage.setItem(storageKey("id_token", account), tokens.id_token);
@@ -1604,7 +1555,7 @@ async function refreshTokens() {
     const response = await fetch(`https://${COGNITO_DOMAIN}/oauth2/token`, {
         method: "POST",
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: body,
+        body,
     });
     if (!response.ok) return false;
     const tokens = await response.json();
@@ -1749,17 +1700,14 @@ function buildLayout() {
     header.id = "header";
     const breadcrumbs = document.createElement("div");
     breadcrumbs.id = "breadcrumbs";
-    header.appendChild(breadcrumbs);
     const zoomTitle = document.createElement("h1");
     zoomTitle.id = "zoom-title";
-    header.appendChild(zoomTitle);
-    document.body.appendChild(header);
+    header.append(breadcrumbs, zoomTitle);
     const outline = document.createElement("div");
     outline.id = "outline";
-    document.body.appendChild(outline);
     const dragIndicator = document.createElement("div");
     dragIndicator.id = "drag-indicator";
-    document.body.appendChild(dragIndicator);
+    document.body.append(header, outline, dragIndicator);
     return outline;
 }
 

@@ -168,6 +168,21 @@ body {
   width: 16px;
 }
 
+/* No-break space to keep a line box for baseline alignment when
+   there is nothing to fold. */
+.toggle::before {
+  content: "\a0";
+}
+
+/* Items with children can be folded. */
+.item:has(> .children > .item) > .row > .toggle::before {
+  content: "⋮";
+}
+
+.item.collapsed:has(> .children > .item) > .row > .toggle::before {
+  content: "⋯";
+}
+
 .bullet {
   border-radius: 999px;
   cursor: pointer;

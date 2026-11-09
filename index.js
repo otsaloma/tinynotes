@@ -22,9 +22,6 @@ const COLORS = [
     ["Clear", null, "c"],
 ];
 
-const FOLD_COLLAPSED = "⋯";
-const FOLD_OPEN = "⋮";
-const NBSP = "\u00a0";
 const SYNC_DEBOUNCE_MS = 3000;
 const UNDO_LIMIT = 100;
 
@@ -113,7 +110,6 @@ function createItem(text, color) {
     row.className = "row";
     const toggle = document.createElement("span");
     toggle.className = "toggle";
-    toggle.textContent = NBSP;
     const bullet = document.createElement("span");
     bullet.className = "bullet";
     bullet.textContent = BULLET;
@@ -130,16 +126,6 @@ function createItem(text, color) {
     children.className = "children";
     item.append(row, children);
     return item;
-}
-
-function updateToggle(item) {
-    const toggle = item.querySelector(":scope > .row > .toggle");
-    if (hasChildren(item)) {
-        toggle.textContent = item.classList.contains("collapsed") ? FOLD_COLLAPSED : FOLD_OPEN;
-    } else {
-        // Keep the column width, there is just nothing to fold.
-        toggle.textContent = NBSP;
-    }
 }
 
 function setFocusedItem(item) {
@@ -406,7 +392,6 @@ function deserialize(items, container) {
         if (data.children?.length > 0) {
             deserialize(data.children, getChildrenEl(item));
         }
-        updateToggle(item);
     }
 }
 
@@ -696,7 +681,6 @@ function zoomIntoItem(item) {
     pushUndo();
     const child = createItem("");
     getChildrenEl(item).appendChild(child);
-    updateToggle(item);
     save();
     getTextEl(child).focus();
 }
@@ -713,13 +697,10 @@ function handleEnter(e) {
         if (hasChildren(item) && !item.classList.contains("collapsed")) {
             const newItem = createItem("");
             childrenEl.prepend(newItem);
-            updateToggle(item);
             getTextEl(newItem).focus();
         } else {
             const newItem = createItem("");
             item.after(newItem);
-            const parentItem = getParentItem(item);
-            if (parentItem) updateToggle(parentItem);
             getTextEl(newItem).focus();
         }
     } else {
@@ -732,11 +713,7 @@ function handleEnter(e) {
         if (cursorPos === 0) {
             clearItemProperties(item);
             getChildrenEl(newItem).append(...getChildrenEl(item).childNodes);
-            updateToggle(item);
-            updateToggle(newItem);
         }
-        const parentItem = getParentItem(item);
-        if (parentItem) updateToggle(parentItem);
         const newTextEl = getTextEl(newItem);
         newTextEl.focus();
         setCursorPos(newTextEl, 0);
@@ -758,9 +735,7 @@ function handleDelete(e) {
     if (!nextItem) return;
     e.preventDefault();
     checkpoint();
-    const parentItem = getParentItem(item);
     item.remove();
-    if (parentItem) updateToggle(parentItem);
     focusItemStart(nextItem);
     save();
 }
@@ -781,19 +756,15 @@ function handleBackspace(e) {
         const idx = visibleItems.indexOf(item);
         const prevItem = visibleItems[idx - 1];
         const nextItem = visibleItems[idx + 1];
-        const parentItem = getParentItem(item);
         item.remove();
-        if (parentItem) updateToggle(parentItem);
         focusAfterRemoval(prevItem, nextItem);
     } else if (text === "" && hasChildren(item)) {
-        const parentItem = getParentItem(item);
         const visibleItems = getVisibleItems();
         const children = Array.from(childrenEl.querySelectorAll(":scope > .item"));
         // The first child is not among the visible items if collapsed.
         const idx = visibleItems.indexOf(children[0]);
         const prevItem = idx > 0 ? visibleItems[idx - 1] : null;
         item.replaceWith(...children);
-        if (parentItem) updateToggle(parentItem);
         if (prevItem) focusItemEnd(prevItem);
     } else {
         const visibleItems = getVisibleItems();
@@ -805,10 +776,7 @@ function handleBackspace(e) {
         prevTextEl.textContent += text;
         const children = Array.from(childrenEl.querySelectorAll(":scope > .item"));
         getChildrenEl(prevItem).append(...children);
-        const parentItem = getParentItem(item);
         item.remove();
-        if (parentItem) updateToggle(parentItem);
-        updateToggle(prevItem);
         prevTextEl.focus();
         setCursorPos(prevTextEl, prevLen);
     }
@@ -826,9 +794,6 @@ function indentItem(textEl) {
     if (prevItem.classList.contains("collapsed")) {
         prevItem.classList.remove("collapsed");
     }
-    updateToggle(prevItem);
-    const oldParent = getParentItem(prevItem);
-    if (oldParent) updateToggle(oldParent);
     textEl.focus();
     setCursorPos(textEl, cursorPos);
     save();
@@ -848,10 +813,7 @@ function handleTabMulti() {
         if (!target) continue;
         if (target.classList.contains("collapsed"))
             target.classList.remove("collapsed");
-        const oldParent = getParentItem(group.roots[0]);
         getChildrenEl(target).append(...group.roots);
-        updateToggle(target);
-        if (oldParent) updateToggle(oldParent);
     }
     if (cursorPos !== null) {
         suppressSelectionClear = true;
@@ -877,8 +839,6 @@ function dedentItem(textEl) {
     }
     getChildrenEl(item).append(...nextSiblings);
     parentItem.after(item);
-    updateToggle(parentItem);
-    updateToggle(item);
     textEl.focus();
     setCursorPos(textEl, cursorPos);
     save();
@@ -909,9 +869,6 @@ function handleShiftTabMulti() {
         getChildrenEl(lastRoot).append(...followingSiblings);
         // Move group roots after parentItem in grandparent
         parentItem.after(...group.roots);
-        updateToggle(parentItem);
-        for (const root of group.roots)
-            updateToggle(root);
     }
     if (cursorPos !== null) {
         suppressSelectionClear = true;
@@ -928,9 +885,7 @@ function deleteItem(textEl) {
     const idx = visibleItems.indexOf(item);
     const prevItem = visibleItems[idx - 1];
     const nextItem = visibleItems[idx + 1];
-    const parentItem = getParentItem(item);
     item.remove();
-    if (parentItem) updateToggle(parentItem);
     focusAfterRemoval(prevItem, nextItem);
     save();
 }
@@ -949,18 +904,10 @@ function handleDeleteMulti() {
         visibleItems.findLast((item, i) => i < firstIdx && !selectedSet.has(item)) ??
         visibleItems.find((item, i) => i > lastIdx && !selectedSet.has(item)) ??
         getParentItem(firstRoot);
-    // Collect original parents for toggle refresh
-    const parents = new Set();
-    for (const root of roots) {
-        const parent = getParentItem(root);
-        if (parent) parents.add(parent);
-    }
     // Remove all roots (descendants go with them)
     for (const root of roots)
         root.remove();
     clearSelection();
-    for (const parent of parents)
-        updateToggle(parent);
     focusAfterRemoval(focusTarget, null);
     save();
 }
@@ -1003,7 +950,6 @@ function toggleCollapse(item) {
     if (!hasChildren(item)) return;
     checkpoint();
     item.classList.toggle("collapsed");
-    updateToggle(item);
     save();
 }
 
@@ -1110,9 +1056,7 @@ function handlePaste(e) {
             if (level === 0) {
                 parent.insertBefore(newItem, ref);
             } else {
-                const parentItem = itemAtLevel[level - 1];
-                getChildrenEl(parentItem).appendChild(newItem);
-                updateToggle(parentItem);
+                getChildrenEl(itemAtLevel[level - 1]).appendChild(newItem);
             }
             itemAtLevel[level] = newItem;
             itemAtLevel.length = level + 1;
@@ -1183,10 +1127,6 @@ function performDrop(draggedItem, target) {
     } else {
         getChildrenEl(ref).prepend(draggedItem);
     }
-    // Both the old and the new parent may have gained or lost their
-    // only child, refreshing all is cheap enough.
-    for (const item of getOutlineEl().querySelectorAll(".item"))
-        updateToggle(item);
     save();
 }
 

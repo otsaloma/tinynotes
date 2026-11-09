@@ -213,7 +213,7 @@ body {
 .text {
   flex: 1;
   outline: none;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 /* Firefox needs a line box in empty contenteditable elements to keep

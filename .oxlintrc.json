@@ -1,0 +1,10 @@
+{
+  "env": {
+    "browser": true
+  },
+  "rules": {
+    "no-self-assign": "off",
+    "no-unused-expressions": "off",
+    "unicorn/no-useless-spread": "off"
+  }
+}

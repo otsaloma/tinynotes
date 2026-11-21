@@ -1,5 +1,4 @@
 // -*- coding: utf-8-unix -*-
-/* global atob, crypto, document, fetch, localStorage, location, navigator, window */
 
 const API_URL = "https://q3yno9wuoi.execute-api.eu-north-1.amazonaws.com";
 const COGNITO_CLIENT_ID = "30j2jbt002e8c3sh053sq6oa3i";

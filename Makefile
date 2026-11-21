@@ -1,16 +1,14 @@
 # -*- coding: utf-8-unix -*-
 
-PYTHON_VERSION := 3.14
-PYTHON := python$(PYTHON_VERSION)
 VERSION := `date +%s`
 
 HTML_S3_TARGET := s3://otsaloma.io/notes
 LAMBDA_NAME := tinynotes-db
-LAMBDA_PLATFORM := manylinux2014_aarch64
+LAMBDA_PLATFORM := aarch64-manylinux_2_34
 LAMBDA_REGION := eu-north-1
 
 check:
-	flake8 *.py
+	uv run flake8 *.py
 	oxlint --deny-warnings *.js
 
 clean:
@@ -23,20 +21,18 @@ clean:
 # https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtimes-supported
 # https://aws.amazon.com/premiumsupport/knowledge-center/lambda-python-package-compatible/
 dist-lambda: check clean
-	cat requirements.txt \
-	| grep -v boto3 \
-	| grep -v flake8 \
-	| grep -v pytest \
-	| grep -v requests \
-	> requirements-lambda.txt || true
-	pip3 install \
-	--platform $(LAMBDA_PLATFORM) \
+	uv export \
+	--no-dev \
+	--no-emit-project \
+	--output-file requirements-lambda.txt
+	uv pip install \
+	--python-platform $(LAMBDA_PLATFORM) \
+	--python-version 3.14 \
 	--target lambda \
-	--implementation cp \
-	--python-version $(PYTHON_VERSION) \
-	--only-binary=:all: \
+	--only-binary :all: \
 	-r requirements-lambda.txt
 	rm -rf lambda/bin
+	rm -f lambda/.lock
 	find lambda -name __pycache__ -prune -exec rm -rf {} \;
 	cp db.py lambda
 	cd lambda && zip -r ../lambda.zip .
@@ -70,16 +66,9 @@ deploy-html: dist-html
 	--cache-control "public, max-age=86400"
 
 run:
-	$(PYTHON) -m http.server
+	uv run python -m http.server
 
 test:
-	pytest test_db.py
+	uv run pytest test_db.py
 
-venv:
-	rm -rf venv
-	$(PYTHON) -m venv venv
-	. venv/bin/activate && \
-	pip install -U pip setuptools wheel && \
-	pip install -r requirements.txt
-
-.PHONY: check clean dist-lambda deploy-lambda dist-html deploy-html run test venv
+.PHONY: check clean dist-lambda deploy-lambda dist-html deploy-html run test

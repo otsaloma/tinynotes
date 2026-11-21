@@ -1,0 +1,14 @@
+[project]
+name = "tinynotes"
+version = "0.0.0"
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    # Provided by the Lambda runtime
+    "boto3==1.42.73",
+    "flake8==7.3.0",
+    "pytest==9.0.2",
+    "requests==2.32.5",
+]

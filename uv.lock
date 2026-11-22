@@ -328,9 +328,9 @@ dev = [
 [package.metadata.requires-dev]
 dev = [
     { name = "boto3", specifier = "==1.42.73" },
-    { name = "flake8", specifier = "==7.3.0" },
-    { name = "pytest", specifier = "==9.0.2" },
-    { name = "requests", specifier = "==2.32.5" },
+    { name = "flake8", specifier = ">=7.3.0" },
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "requests", specifier = ">=2.32.5" },
 ]
 
 [[package]]

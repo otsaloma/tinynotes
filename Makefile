@@ -1,11 +1,11 @@
 # -*- coding: utf-8-unix -*-
 
-VERSION := `date +%s`
+VERSION = `date +%s`
 
-HTML_S3_TARGET := s3://otsaloma.io/notes
-LAMBDA_NAME := tinynotes-db
-LAMBDA_PLATFORM := aarch64-manylinux_2_34
-LAMBDA_REGION := eu-north-1
+HTML_S3_TARGET  = s3://otsaloma.io/notes
+LAMBDA_NAME     = tinynotes-db
+LAMBDA_PLATFORM = aarch64-manylinux_2_34
+LAMBDA_REGION   = eu-north-1
 
 check:
 	uv run flake8 *.py
